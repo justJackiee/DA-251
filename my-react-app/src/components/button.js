@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
 
-// 🟦 Nút chính (Primary)
+// Nút chính (Primary)
 export const PrimaryButton = ({ text, onClick }) => (
   <button
     onClick={onClick}
@@ -11,7 +11,7 @@ export const PrimaryButton = ({ text, onClick }) => (
   </button>
 );
 
-// ⚪ Nút phụ (Secondary)
+// Nút phụ (Secondary)
 export const SecondaryButton = ({ text, onClick }) => (
   <button
     onClick={onClick}
@@ -21,7 +21,7 @@ export const SecondaryButton = ({ text, onClick }) => (
   </button>
 );
 
-// 🔍 Nút có icon (IconButton)
+// Nút có icon (IconButton)
 export const IconButton = ({ icon, label, onClick }) => (
   <button
     onClick={onClick}
@@ -32,7 +32,7 @@ export const IconButton = ({ icon, label, onClick }) => (
   </button>
 );
 
-// 📂 Nút Dropdown (DropdownButton)
+// Nút Dropdown (DropdownButton)
 export const DropdownButton = ({ label, options }) => {
   const [open, setOpen] = useState(false);
 

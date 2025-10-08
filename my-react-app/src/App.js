@@ -1,39 +1,27 @@
-import logo from './logo.svg';
-import './App.css';
-import { HRNavbar } from './components/Navbar';
-import Dashboard from './pages/dashboard';
+import React from "react";
+import { FaSearch, FaTrash } from "react-icons/fa";
 import {
-    BrowserRouter as Router,
-    Routes,
-    Route,
-} from "react-router-dom";
+  PrimaryButton,
+  SecondaryButton,
+  IconButton,
+  DropdownButton,
+} from "./components/button";
+
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <HRNavbar />
-        
-        <Routes>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/employeemanagement" element={<h1>Employee Management Page</h1>} />
-          <Route path="/contract" element={<h1>Contract Page</h1>} />
-          <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />
-          <Route path="/" element={
-       
-              <header className="App-header">
-                <img src={logo} className="App-logo" alt="logo" />
-                <h1 style={{ fontFamily: 'Baloo 2, sans-serif', color: '#06007c' }}>
-                  Welcome to HR Management System
-                </h1>
-                <p style={{ fontFamily: 'Baloo 2, sans-serif', color: '#666' }}>
-                  Click on Dashboard in the navigation to get started!
-                </p>
-              </header>
-           
-          } />
-        </Routes>
-      </div>
-    </Router>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+      <PrimaryButton text="Save" onClick={() => alert("Saved!")} />
+      <SecondaryButton text="Cancel" onClick={() => alert("Cancelled!")} />
+      <IconButton icon={<FaSearch />} label="Search" onClick={() => alert("Searching...")} />
+      <IconButton icon={<FaTrash />} label="Delete" onClick={() => alert("Deleted!")} />
+      <DropdownButton
+        label="Select Report"
+        options={[
+          { label: "Monthly Report", onClick: () => alert("Monthly selected") },
+          { label: "Yearly Report", onClick: () => alert("Yearly selected") },
+        ]}
+      />
+    </div>
   );
 }
 

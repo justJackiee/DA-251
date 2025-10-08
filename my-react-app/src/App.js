@@ -17,7 +17,12 @@ function App() {
         <HRNavbar />
         
         <Routes>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={
+             <>
+            <Dashboard />
+            <Pagination />
+          </>
+            } />
           <Route path="/employeemanagement" element={<h1>Employee Management Page</h1>} />
           <Route path="/contract" element={<h1>Contract Page</h1>} />
           <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />

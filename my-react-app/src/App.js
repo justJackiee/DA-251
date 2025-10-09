@@ -2,15 +2,19 @@ import logo from './logo.svg';
 import './App.css';
 import { HRNavbar } from './components/Navbar';
 import CustomScrollbar from './components/schollbar';
+import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
+import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
 import {
     BrowserRouter as Router,
     Routes,
     Route,
 } from "react-router-dom";
 
+import { ThemeProvider } from "@material-tailwind/react";
 function App() {
   return (
+    <ThemeProvider>
     <Router>
       <div className="h-screen flex flex-col">
         <HRNavbar />
@@ -38,6 +42,7 @@ function App() {
         </main>
       </div>
     </Router>
+    </ThemeProvider>
   );
 }
 

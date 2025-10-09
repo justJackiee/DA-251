@@ -3,6 +3,7 @@ import './App.css';
 import { HRNavbar } from './components/Navbar';
 import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
+import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
 import {
     BrowserRouter as Router,
     Routes,

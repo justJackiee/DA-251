@@ -1,7 +1,16 @@
-import React from 'react';
+import TotalEmployeesCard from '../components/Card/TotalEmployeesCard';
+import WhosOnLeaveCard from "../components/Card/WhosOnLeaveCard";
+import { NewComersCard } from "../components/Card/NewComersCard";
+import UpComingCard from "../components/Card/UpComingCard";
 
 function Dashboard() {
-    return <h1>Dashboard Page</h1>;
+    return (<>
+    <TotalEmployeesCard/>
+    <WhosOnLeaveCard/>
+    {/*<NewComersCard/>*/}
+    <UpComingCard/>
+    </>);
+    
 };
 
 

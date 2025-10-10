@@ -12,6 +12,7 @@ import {
 } from "react-router-dom";
 
 import { ThemeProvider } from "@material-tailwind/react";
+
 function App() {
   return (
     <ThemeProvider>

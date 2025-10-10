@@ -1,3 +1,7 @@
+import TotalEmployeesCard from '../components/Card/TotalEmployeesCard';
+import WhosOnLeaveCard from "../components/Card/WhosOnLeaveCard";
+import { NewComersCard } from "../components/Card/NewComersCard";
+import UpComingCard from "../components/Card/UpComingCard";
 import React, { useState, useEffect } from 'react';
 
 // Thẻ thống kê nhỏ
@@ -67,6 +71,10 @@ function Dashboard() {
   }, []);
 
   return (
+    <> <TotalEmployeesCard/>
+    <WhosOnLeaveCard/>
+    {/*<NewComersCard/>*/}
+    <UpComingCard/>
     <div className="p-6">
       <h1 className="text-4xl font-bold mb-6 text-gray-900">Dashboard</h1>
 
@@ -119,6 +127,8 @@ function Dashboard() {
         />
       ))}
     </div>
+    
+    </>
   );
 }
 

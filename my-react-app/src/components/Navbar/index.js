@@ -111,6 +111,15 @@ export function HRNavbar() {
             }}>
               Dashboard
             </Link>
+            <a href="/login" style={{ 
+              textDecoration: 'none', 
+              color: '#a8a8a8ff', 
+              fontSize: '1rem', 
+              fontWeight: '650',
+              fontFamily: 'Baloo 2, sans-serif'
+            }}>
+              Login
+            </a>
             <a href="/employeemanagement" style={{ 
               textDecoration: 'none', 
               color: '#a8a8a8ff', 

@@ -8,6 +8,7 @@ import CustomScrollbar from './components/schollbar';
 import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
 import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
+import ProfileDetails from "./components/EmployeeProfileDetails/ProfileDetails";
 import {
   PrimaryButton,
   SecondaryButton,
@@ -48,7 +49,7 @@ function App() {
             <div className="p-4 md:p-8">
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/employeemanagement" element={<h1>Employee Management Page</h1>} />
+                <Route path="/employeemanagement" element={<ProfileDetails />} />
                 <Route path="/contract" element={<h1>Contract Page</h1>} />
                 <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />
                 <Route path="/" element={

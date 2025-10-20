@@ -1,0 +1,123 @@
+.whosOnLeaveCard {
+  position: absolute; 
+  top: 420px; 
+  left: 930px; 
+  width: 308px; 
+  height: 410px; 
+  background: #FFFFFFFF; /* white */
+  border-radius: 6px; /* border-l */
+  box-shadow: 0px 0px 1px #171a1f12, 0px 0px 2px #9d9e9fb3; /* shadow-xs */
+}
+
+.whosOnLeaveCard .header .icon {
+  position: absolute; 
+  top: 24px; 
+  left: 24px; 
+  width: 20px; 
+  height: 20px; 
+  fill: rgb(255, 255, 255); /* secondary-800 */
+}
+
+.whosOnLeaveCard .header .text {
+  position: absolute; 
+  top: 5px; 
+  left: 60px; 
+  font-family: Baloo 2; /* Heading */
+  font-size: 18px; 
+  line-height: 28px; 
+  font-weight: 600; 
+  color: #0F0A62FF; /* secondary-800 */
+}
+
+.todaysection .today {
+  position: absolute; 
+  top: 46px; 
+  left: 24px; 
+  font-family: Outfit; /* Body */
+  font-size: 14px; 
+  line-height: 22px; 
+  font-weight: 400; 
+  color: #9095A0FF; /* neutral-500 */
+}
+
+.whosOnLeaveCard .todaysection .listtoday {
+  list-style-type: none; 
+  padding-left: 28px; 
+  margin: 80px 0 0 0;
+}
+
+.whosOnLeaveCard .todaysection .listtoday .list {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 0px;
+}
+
+.whosOnLeaveCard .todaysection .listtoday .list .avatar {
+  width: 28px; 
+  margin-top: 20px;
+  height: 28px;  
+  border-radius: 14px; 
+}
+
+.whosOnLeaveCard .list .name {
+  font-family: "Outfit", sans-serif;
+  font-size: 14px;
+  line-height: 18px;  
+  font-weight: 400;
+  color: #323842FF;
+  margin-bottom: 2px; 
+}
+
+.whosOnLeaveCard .list .date {
+  color: #8a8a8a;
+  font-size: 12px;
+  margin: 0;
+}
+
+.whosOnLeaveCard .nextweeksection .nextweek {
+  position: absolute; 
+  top: 180px; 
+  left: 24px; 
+  font-family: Outfit; /* Body */
+  font-size: 14px; 
+  line-height: 22px; 
+  font-weight: 400; 
+  color: #9095A0FF; /* neutral-500 */
+}
+
+.whosOnLeaveCard .nextweeksection .listnextweek {
+  list-style-type: none; 
+  padding-left: 28px; 
+  margin: 40px 0 0 0;
+}
+
+.whosOnLeaveCard .nextweeksection .listnextweek .list2 {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 0px;
+}
+
+.whosOnLeaveCard .nextweeksection .listnextweek .avatar2 {
+  width: 28px; 
+  margin-top: 20px;
+  height: 28px;  
+  border-radius: 14px; 
+}
+
+.whosOnLeaveCard .nextweeksection .listnextweek .name2 {
+  font-family: "Outfit", sans-serif;
+  font-size: 14px;
+  line-height: 18px;  
+  font-weight: 400;
+  color: #323842FF;
+  margin-bottom: 2px; 
+}
+
+.whosOnLeaveCard .nextweeksection .listnextweek .date2 {
+  color: #8a8a8a;
+  font-size: 12px;
+  margin: 0;
+}
+

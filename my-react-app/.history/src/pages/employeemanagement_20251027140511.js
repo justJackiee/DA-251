@@ -9,6 +9,7 @@ import React from "react";
 import CEmployeeTable from "../components/Table/CEmployeeTable";
 import HeaderTabs from '../components/HeaderTabs';
 import FiltersBar from '../components/FiltersBar';
+import CEmployeeTable from '../components/Table/CEmployeeTable';
 
 export default function EmployeeManagement() {
   const [activeTab, setActiveTab] = React.useState('team');

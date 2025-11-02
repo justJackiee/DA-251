@@ -1,6 +1,7 @@
 import React from "react";
-import { Edit2, ChevronLeft } from "lucide-react";
+import { Edit2, ChevronLeft, Info } from "lucide-react";
 import TOC from "./TOC";
+import CEmployeeTable from "../Table/CEmployeeTable";
 
 export default function ProfileDetails() {
   const tocItems = [
@@ -98,13 +99,49 @@ export default function ProfileDetails() {
           {/* Contract Section */}
           <section id="contract-section" className="bg-white rounded-2xl shadow p-6">
             <SectionHeader title="Contract" />
-            <p className="text-sm text-gray-500">Coming soon...</p>
+            <CEmployeeTable />
           </section>
 
           {/* Payslip Section */}
           <section id="payslip-section" className="bg-white rounded-2xl shadow p-6">
             <SectionHeader title="Payslip" />
-            <p className="text-sm text-gray-500">Coming soon...</p>
+            <SubSection title="Earning">
+              <InfoGrid
+                data={{
+                  "Payroll Type": "Monthly",
+                  "Days Present": "19",
+                  "Payroll Month": "Dec 2023",
+                  "Late (Minute)": "15",
+                  "Daily Rate": "$200",
+                  "Overtime (Minute)": "60",
+                  "Rate / Hour": "$25",
+                  "Nationality": "Vietnamese",
+                }}
+              />
+            </SubSection>
+            <SubSection title="Other Earnings" showCount={true}>
+              <InfoGrid
+                data={{
+                  "Project Bonus": "$100",
+                }}
+              />
+            </SubSection>
+            <SubSection title="Other Deduction" showCount={true}>
+              <InfoGrid
+                data={{
+                  
+                }}
+              />
+            </SubSection>
+            <SubSection title="Total" className="bg-orange-50 p-4 rounded-lg">
+              <InfoGrid
+                data={{
+                  "Total Earnings": "$1,500",
+                  "Total Deductions": "$200",
+                  "Net Pay": "$1,300",
+                }}
+              />
+            </SubSection>
           </section>
         </div>
 
@@ -133,24 +170,37 @@ function SectionHeader({ title }) {
   );
 }
 
-function SubSection({ title, children }) {
+function SubSection({ title, children, showCount = false }) {
+  const childArray = React.Children.toArray(children);
+  const grid = childArray.find((ch) => ch.type?.displayName === "InfoGrid");
+  const count = grid?.props?.data ? Object.values(grid.props.data).filter(
+    (v) => v !== null && v !== undefined && `${v}`.trim() !== ""
+  ).length : 0;
+  const label = showCount ? `${title} (${count})` : title;
   return (
     <div className="mb-6">
-      <h4 className="font-medium text-sm text-gray-700 mb-3">{title}</h4>
+      <h4 className="font-medium text-sm text-gray-700 mb-3">{label}</h4>
       {children}
     </div>
   );
 }
 
 function InfoGrid({ data }) {
+  const entries = Object.entries(data).filter(
+    ([, v]) => v !== null && v !== undefined && `${v}`.trim() !== ""
+  );
   return (
     <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-sm text-gray-700">
-      {Object.entries(data).map(([key, value]) => (
+      {entries.length > 0 ? (entries.map(([key, value]) => (
         <div key={key}>
-          <span className="block text-gray-400">{key}</span>
-          <span>{value}</span>
-        </div>
-      ))}
+            <span className="block text-gray-400">{key}</span>
+            <span>{value}</span>
+          </div>
+        ))
+      ) : (
+        <span className="text-gray-400">None</span>
+      )}
     </div>
   );
 }
+InfoGrid.displayName = "InfoGrid";

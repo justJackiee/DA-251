@@ -8,6 +8,16 @@ import UpcomingLeave from '../components/Card/upcomingLeave.js';
 import LateCheckinRanking from '../components/Card/lateChecking.js';
 import React, { useState, useEffect } from 'react';
 
+// Thẻ thống kê nhỏ
+function StatCard({ title, value, color }) {
+  return (
+    <div className={`flex flex-col items-center justify-center bg-${color}-100 p-4 rounded-xl shadow-md`}>
+      <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
+      <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
+    </div>
+  );
+}
+
 function Dashboard() {
   return (
     <div className="grid grid-cols-4 gap-1 items-start">

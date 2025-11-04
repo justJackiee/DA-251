@@ -1,5 +1,3 @@
-import React from "react";
-import { FaSearch, FaTrash } from "react-icons/fa";
 import logo from './logo.svg';
 import './App.css';
 
@@ -9,12 +7,8 @@ import CustomScrollbar from './components/schollbar';
 import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
 import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
-import {
-  PrimaryButton,
-  SecondaryButton,
-  IconButton,
-  DropdownButton,
-} from "./components/button";
+import PayrollPage from './pages/payroll';
+
 
 import {
     BrowserRouter as Router,
@@ -23,7 +17,6 @@ import {
 } from "react-router-dom";
 
 import { ThemeProvider } from "@material-tailwind/react";
-
 function App() {
   return (
     <ThemeProvider>
@@ -32,7 +25,17 @@ function App() {
         <HRNavbar />
         
         <main className="flex-1 relative">
-
+          {/* <PrimaryButton text="Save" onClick={() => alert("Saved!")} />
+          <SecondaryButton text="Cancel" onClick={() => alert("Cancelled!")} />
+          <IconButton icon={<FaSearch />} label="Search" onClick={() => alert("Searching...")} />
+          <IconButton icon={<FaTrash />} label="Delete" onClick={() => alert("Deleted!")} /> */}
+          {/* <DropdownButton
+            label="Select Report"
+            options={[
+              { label: "Monthly Report", onClick: () => alert("Monthly selected") },
+              { label: "Yearly Report", onClick: () => alert("Yearly selected") },
+            ]}
+          /> */}
 
           <CustomScrollbar>
             {/* <div className="p-4 md:p-8"> dùng để canh lề (margin)*/}
@@ -40,9 +43,10 @@ function App() {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/employeemanagement" element={<h1>Employee Management Page</h1>} />
+                <Route path="/employeemanagement" element={<EmployeeManagement />} />
                 <Route path="/contract" element={<h1>Contract Page</h1>} />
                 <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />
+                <Route path="/payroll" element={<PayrollPage />} />
                 <Route path="/" element={
                   <header className="App-header">
                     <img src={logo} className="App-logo" alt="logo" />

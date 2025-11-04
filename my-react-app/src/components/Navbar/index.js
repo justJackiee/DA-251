@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 export function HRNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,6 +19,11 @@ export function HRNavbar() {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
+
+  const location = useLocation();
+  const current = location.pathname || '/';
+
+  const linkColor = (path) => (current === path ? '#fc6544' : '#a8a8a8ff');
 
   return (
     <nav style={{
@@ -43,12 +48,34 @@ export function HRNavbar() {
         position: 'relative'
       }}>
         {/* Left side: Brand */}
+         {isMobile && (
+          <div style={{ marginLeft: '0.5rem', zIndex: 20 }}>
+            <button
+              onClick={toggleMenu}
+              aria-label="Open menu"
+              style={{
+                background: 'none',
+                border: '2px solid #fc6544',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                padding: '0.25rem 0.5rem',
+                color: '#fc6544',
+                borderRadius: '4px'
+              }}
+            >
+              {isMenuOpen ? '✕' : '☰'}
+            </button>
+          </div>
+        )}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',
-          position: 'absolute',
-          left: '1rem'
+          // On desktop we position the brand absolutely to allow a centered menu.
+          // On mobile we keep it in normal flow so it doesn't overlap the hamburger button.
+          position: isMobile ? 'relative' : 'absolute',
+          left: isMobile ? '0.5rem' : '1rem',
+          zIndex: 10
         }}>
           {/* Brand / Logo and Text Container */}
           <div style={{
@@ -70,8 +97,8 @@ export function HRNavbar() {
                 src="/idCu14vzRC_logos-removebg-preview.png" 
                 alt="HRManagement Logo" 
                 style={{ 
-                  maxHeight: '70px',
-                  maxWidth: '70px',
+                  maxHeight: isMobile ? '40px' : '70px',
+                  maxWidth: isMobile ? '40px' : '70px',
                   width: 'auto',
                   height: 'auto',
                   objectFit: 'contain'
@@ -82,7 +109,7 @@ export function HRNavbar() {
             <h2 style={{ 
               margin: 0, 
               color: '#ffffff', 
-              fontSize: '1.8rem',
+              fontSize: isMobile ? '1.6rem' : '1.8rem',
               fontWeight: '700',
               fontFamily: 'Baloo 2, sans-serif',
               letterSpacing: '-0.5px'
@@ -91,6 +118,8 @@ export function HRNavbar() {
             </h2>
           </div>          
         </div>
+        {/* Mobile hamburger placed inside left brand container so it's on the left side */}
+       
         
         {/* Center: Desktop Menu */}
         {!isMobile && (
@@ -104,7 +133,7 @@ export function HRNavbar() {
           }}>
             <Link to="/dashboard" style={{ 
               textDecoration: 'none', 
-              color: '#fc6544', 
+              color: linkColor('/dashboard'), 
               fontSize: '1rem', 
               fontWeight: '650',
               fontFamily: 'Baloo 2, sans-serif'
@@ -122,36 +151,45 @@ export function HRNavbar() {
             </a>
             <a href="/employeemanagement" style={{ 
               textDecoration: 'none', 
-              color: '#a8a8a8ff', 
+              color: linkColor('/employeemanagement'), 
               fontSize: '1rem', 
               fontWeight: '650',
               fontFamily: 'Baloo 2, sans-serif'
             }}>
               Employees Management
             </a>
-            <a href="/timetracking" style={{ 
+            <Link to="/timetracking" style={{ 
               textDecoration: 'none', 
-              color: '#a8a8a8ff', 
+              color: linkColor('/timetracking'), 
               fontSize: '1rem', 
               fontWeight: '650',
               fontFamily: 'Baloo 2, sans-serif'
             }}>
               Time Tracking
-            </a>
-            <a href="/contract" style={{ 
+            </Link>
+            <Link to="/contract" style={{ 
+              textDecoration: 'none', 
+              color: linkColor('/contract'), 
+              fontSize: '1rem', 
+              fontWeight: '650',
+              fontFamily: 'Baloo 2, sans-serif'
+            }}>
+              Contract
+            </Link>
+            <a href="/payroll" style={{ 
               textDecoration: 'none', 
               color: '#a8a8a8ff', 
               fontSize: '1rem', 
               fontWeight: '650',
               fontFamily: 'Baloo 2, sans-serif'
             }}>
-              Contract
+              Payroll
             </a>
           </div>
         )}
         
-        {/* Right side: Button and Mobile Menu */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+  {/* Right side: Button and Mobile Menu (hidden on mobile) */}
+  <div style={{ display: 'flex', alignItems: 'center' }}>
           {/* Desktop Button - Hidden on mobile */}
           {/* {!isMobile && (
             <button style={{
@@ -169,18 +207,19 @@ export function HRNavbar() {
             </button>
           )} */}
           
-          {/* Mobile Hamburger Menu - Always show for testing */}
+          {/* Desktop-only button (hidden on mobile) - kept for symmetry if needed */}
+          {/* Hide the hamburger on desktop: only show mobile hamburger (left side) */}
           <button 
             onClick={toggleMenu}
             style={{ 
               background: 'none',
-              border: '2px solid #fc6544',  // Add visible border for testing
+              border: '2px solid #fc6544',
               fontSize: '1.5rem',
               cursor: 'pointer',
               padding: '0.5rem',
               color: '#fc6544',
-              borderRadius: '4px',          // Add border radius
-              display: isMobile ? 'block' : 'none'  // Explicit display control
+              borderRadius: '4px',
+              display: 'none' // ensure no hamburger appears on desktop
             }}
           >
             {isMenuOpen ? '✕' : '☰'}
@@ -210,7 +249,7 @@ export function HRNavbar() {
         }}>
           <Link to="/dashboard" style={{ 
             textDecoration: 'none', 
-            color: '#374151', 
+            color: linkColor('/dashboard'), 
             fontSize: '1rem',
             padding: '1rem 0',
             borderBottom: '1px solid #f3f4f6',
@@ -218,27 +257,37 @@ export function HRNavbar() {
           }}>
             Dashboard
           </Link>
-          <a href="/employeemanagement" style={{ 
+          <Link to="/employeemanagement" style={{ 
             textDecoration: 'none', 
-            color: '#374151', 
+            color: linkColor('/employeemanagement'), 
             fontSize: '1rem',
             padding: '1rem 0',
             borderBottom: '1px solid #f3f4f6',
             fontFamily: 'Baloo 2, sans-serif'
           }}>
             Employees Management
-          </a>
-          <a href="/timetracking" style={{ 
+          </Link>
+          <Link to="/timetracking" style={{ 
             textDecoration: 'none', 
-            color: '#374151', 
+            color: linkColor('/timetracking'), 
             fontSize: '1rem',
             padding: '1rem 0',
             borderBottom: '1px solid #f3f4f6',
             fontFamily: 'Baloo 2, sans-serif'
           }}>
             Time Tracking
-          </a>
-          <a href="/contract" style={{ 
+          </Link>
+          <Link to="/contract" style={{ 
+            textDecoration: 'none', 
+            color: linkColor('/contract'), 
+            fontSize: '1rem',
+            padding: '1rem 0',
+            borderBottom: '1px solid #f3f4f6',
+            fontFamily: 'Baloo 2, sans-serif'
+          }}>
+            Contract
+          </Link>
+          <a href="/payroll" style={{ 
             textDecoration: 'none', 
             color: '#374151', 
             fontSize: '1rem',
@@ -246,7 +295,7 @@ export function HRNavbar() {
             borderBottom: '1px solid #f3f4f6',
             fontFamily: 'Baloo 2, sans-serif'
           }}>
-            Contract
+            Payroll
           </a>
           {/* <button style={{
             backgroundColor: '#374151',

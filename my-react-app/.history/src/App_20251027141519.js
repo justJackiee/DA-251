@@ -31,17 +31,17 @@ function App() {
         <HRNavbar />
         
         <main className="flex-1 relative">
-          {/* <PrimaryButton text="Save" onClick={() => alert("Saved!")} />
+          <PrimaryButton text="Save" onClick={() => alert("Saved!")} />
           <SecondaryButton text="Cancel" onClick={() => alert("Cancelled!")} />
           <IconButton icon={<FaSearch />} label="Search" onClick={() => alert("Searching...")} />
-          <IconButton icon={<FaTrash />} label="Delete" onClick={() => alert("Deleted!")} /> */}
-          {/* <DropdownButton
+          <IconButton icon={<FaTrash />} label="Delete" onClick={() => alert("Deleted!")} />
+          <DropdownButton
             label="Select Report"
             options={[
               { label: "Monthly Report", onClick: () => alert("Monthly selected") },
               { label: "Yearly Report", onClick: () => alert("Yearly selected") },
             ]}
-          /> */}
+          />
 
           <CustomScrollbar>
             {/* <div className="p-4 md:p-8"> dùng để canh lề (margin)*/}

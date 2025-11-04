@@ -56,7 +56,7 @@ function App() {
                 <Route path="/employeemanagement/profile" element={<ProfileDetails />} />
                 <Route path="/employeemanagement" element={<EmployeeManagement />} />
                 <Route path="/contract" element={<h1>Contract Page</h1>} />
-                <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />
+                <Route path="/timetracking" element={<TimeTracking />} />
                 <Route path="/payroll" element={<PayrollPage />} />
                 <Route path="/" element={
                   <header className="App-header">

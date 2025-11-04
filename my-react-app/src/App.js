@@ -7,6 +7,13 @@ import CustomScrollbar from './components/schollbar';
 import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
 import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
+import ProfileDetails from "./components/EmployeeProfileDetails/ProfileDetails";
+import {
+  PrimaryButton,
+  SecondaryButton,
+  IconButton,
+  DropdownButton,
+} from "./components/button";
 import PayrollPage from './pages/payroll';
 
 
@@ -46,6 +53,7 @@ function App() {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/employeemanagement/profile" element={<ProfileDetails />} />
                 <Route path="/employeemanagement" element={<EmployeeManagement />} />
                 <Route path="/contract" element={<h1>Contract Page</h1>} />
                 <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />

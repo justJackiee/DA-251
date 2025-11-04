@@ -140,7 +140,16 @@ export function HRNavbar() {
             }}>
               Dashboard
             </Link>
-            <Link to="/employeemanagement" style={{ 
+            <a href="/login" style={{ 
+              textDecoration: 'none', 
+              color: '#a8a8a8ff', 
+              fontSize: '1rem', 
+              fontWeight: '650',
+              fontFamily: 'Baloo 2, sans-serif'
+            }}>
+              Login
+            </a>
+            <a href="/employeemanagement" style={{ 
               textDecoration: 'none', 
               color: linkColor('/employeemanagement'), 
               fontSize: '1rem', 
@@ -148,7 +157,7 @@ export function HRNavbar() {
               fontFamily: 'Baloo 2, sans-serif'
             }}>
               Employees Management
-            </Link>
+            </a>
             <Link to="/timetracking" style={{ 
               textDecoration: 'none', 
               color: linkColor('/timetracking'), 

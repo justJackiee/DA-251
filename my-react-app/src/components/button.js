@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
+import { FaDownload, FaCheck, FaTimes } from "react-icons/fa";
 
 // Nút chính (Primary)
 export const PrimaryButton = ({ text, onClick }) => (
@@ -64,4 +65,34 @@ export const DropdownButton = ({ label, options }) => {
       )}
     </div>
   );
+}
+
+//Button cho page Time Tracking
+export default function TrackingButtons() {
+  return (
+    <div className="flex gap-2">
+      {/* Download Button */}
+      <button
+        className="flex items-center rounded-sm gap-2 px-4 w-[131px] h-[44px] bg-orange-100 text-orange-600 
+                   text-[16px] font-medium rounded-lg hover:bg-orange-100 
+                   transition-all"
+      >
+        <FaDownload className="text-sm" />
+        Download
+      </button>
+
+      {/* Reject Button */}
+      <button className="flex items-center gap-2 px-4 w-[106px] h-[44] rounded-sm bg-red-600 text-white font-medium hover:bg-red-700 transition-all">
+        <FaTimes className="text-sm" />
+        Reject
+      </button>
+
+      {/* Approve Button */}
+      <button className="flex items-center gap-2 px-4 rounded-sm bg-green-500 text-white font-medium hover:bg-green-600 transition-all">
+        <FaCheck className="text-sm" />
+        Approve
+      </button>
+    </div>
+  );
 };
+

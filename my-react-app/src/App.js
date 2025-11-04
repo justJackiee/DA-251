@@ -17,6 +17,8 @@ import {
 } from "react-router-dom";
 
 import { ThemeProvider } from "@material-tailwind/react";
+import TimeTracking from "./pages/timetracking";
+
 function App() {
   return (
     <ThemeProvider>
@@ -25,7 +27,8 @@ function App() {
         <HRNavbar />
         
         <main className="flex-1 relative">
-          {/* <PrimaryButton text="Save" onClick={() => alert("Saved!")} />
+          {/*
+          <PrimaryButton text="Save" onClick={() => alert("Saved!")} />
           <SecondaryButton text="Cancel" onClick={() => alert("Cancelled!")} />
           <IconButton icon={<FaSearch />} label="Search" onClick={() => alert("Searching...")} />
           <IconButton icon={<FaTrash />} label="Delete" onClick={() => alert("Deleted!")} /> */}
@@ -39,7 +42,7 @@ function App() {
 
           <CustomScrollbar>
             {/* <div className="p-4 md:p-8"> dùng để canh lề (margin)*/}
-            <div className="p-4 md:p-8">
+            <div className="p-1">
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/dashboard" element={<Dashboard />} />

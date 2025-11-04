@@ -1,12 +1,19 @@
+import React from "react";
+import { FaSearch, FaTrash } from "react-icons/fa";
 import logo from './logo.svg';
 import './App.css';
+
 import { HRNavbar } from './components/Navbar';
 import CustomScrollbar from './components/schollbar';
 import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
 import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
-import PayrollPage from './pages/payroll';
-
+import {
+  PrimaryButton,
+  SecondaryButton,
+  IconButton,
+  DropdownButton,
+} from "./components/button";
 
 import {
     BrowserRouter as Router,
@@ -15,6 +22,7 @@ import {
 } from "react-router-dom";
 
 import { ThemeProvider } from "@material-tailwind/react";
+
 function App() {
   return (
     <ThemeProvider>
@@ -43,7 +51,6 @@ function App() {
                 <Route path="/employeemanagement" element={<EmployeeManagement />} />
                 <Route path="/contract" element={<h1>Contract Page</h1>} />
                 <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />
-                <Route path="/payroll" element={<PayrollPage />} />
                 <Route path="/" element={
                   <header className="App-header">
                     <img src={logo} className="App-logo" alt="logo" />

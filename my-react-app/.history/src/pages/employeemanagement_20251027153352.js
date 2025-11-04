@@ -10,7 +10,7 @@ import CEmployeeTable from "../components/Table/CEmployeeTable";
 import HeaderTabs from '../components/HeaderTabs';
 import FiltersBar from '../components/FiltersBar';
 
-function EmployeeManagement() {
+export default function EmployeeManagement() {
   const [activeTab, setActiveTab] = React.useState('team');
   const [search, setSearch] = React.useState('');
   const [filters, setFilters] = React.useState({ office: '', department: '' });
@@ -34,6 +34,3 @@ function EmployeeManagement() {
     </div>
   );
 }
-
-export default EmployeeManagement;
-

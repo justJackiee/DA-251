@@ -97,8 +97,8 @@ export function HRNavbar() {
                 src="/idCu14vzRC_logos-removebg-preview.png" 
                 alt="HRManagement Logo" 
                 style={{ 
-                  maxHeight: isMobile ? '40px' : '70px',
-                  maxWidth: isMobile ? '40px' : '70px',
+                  maxHeight: isMobile ? '80px' : '70px',
+                  maxWidth: isMobile ? '80px' : '70px',
                   width: 'auto',
                   height: 'auto',
                   objectFit: 'contain'
@@ -109,7 +109,7 @@ export function HRNavbar() {
             <h2 style={{ 
               margin: 0, 
               color: '#ffffff', 
-              fontSize: isMobile ? '1.6rem' : '1.8rem',
+              fontSize: isMobile ? '1rem' : '1.8rem',
               fontWeight: '700',
               fontFamily: 'Baloo 2, sans-serif',
               letterSpacing: '-0.5px'
@@ -167,15 +167,6 @@ export function HRNavbar() {
             }}>
               Contract
             </Link>
-            <a href="/payroll" style={{ 
-              textDecoration: 'none', 
-              color: '#a8a8a8ff', 
-              fontSize: '1rem', 
-              fontWeight: '650',
-              fontFamily: 'Baloo 2, sans-serif'
-            }}>
-              Payroll
-            </a>
           </div>
         )}
         
@@ -199,7 +190,6 @@ export function HRNavbar() {
           )} */}
           
           {/* Desktop-only button (hidden on mobile) - kept for symmetry if needed */}
-          {/* Hide the hamburger on desktop: only show mobile hamburger (left side) */}
           <button 
             onClick={toggleMenu}
             style={{ 
@@ -210,7 +200,7 @@ export function HRNavbar() {
               padding: '0.5rem',
               color: '#fc6544',
               borderRadius: '4px',
-              display: 'none' // ensure no hamburger appears on desktop
+              display: isMobile ? 'none' : 'block'
             }}
           >
             {isMenuOpen ? '✕' : '☰'}
@@ -278,16 +268,6 @@ export function HRNavbar() {
           }}>
             Contract
           </Link>
-          <a href="/payroll" style={{ 
-            textDecoration: 'none', 
-            color: '#374151', 
-            fontSize: '1rem',
-            padding: '1rem 0',
-            borderBottom: '1px solid #f3f4f6',
-            fontFamily: 'Baloo 2, sans-serif'
-          }}>
-            Payroll
-          </a>
           {/* <button style={{
             backgroundColor: '#374151',
             color: 'white',

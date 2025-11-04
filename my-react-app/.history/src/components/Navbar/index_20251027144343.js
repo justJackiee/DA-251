@@ -38,6 +38,22 @@ export function HRNavbar() {
       overflow: 'visible',
       boxSizing: 'border-box'
     }}>
+      {/* Mobile Hamburger Menu - Always show for testing */}
+          <button 
+            onClick={toggleMenu}
+            style={{ 
+              background: 'none',
+              border: '2px solid #fc6544',  // Add visible border for testing
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              padding: '0.5rem',
+              color: '#fc6544',
+              borderRadius: '4px',          // Add border radius
+              display: isMobile ? 'block' : 'none'  // Explicit display control
+            }}
+          >
+            {isMenuOpen ? '✕' : '☰'}
+          </button>
       {/* Main Navigation Bar */}
       <div style={{
         display: 'flex',
@@ -48,25 +64,6 @@ export function HRNavbar() {
         position: 'relative'
       }}>
         {/* Left side: Brand */}
-         {isMobile && (
-          <div style={{ marginLeft: '0.5rem', zIndex: 20 }}>
-            <button
-              onClick={toggleMenu}
-              aria-label="Open menu"
-              style={{
-                background: 'none',
-                border: '2px solid #fc6544',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                padding: '0.25rem 0.5rem',
-                color: '#fc6544',
-                borderRadius: '4px'
-              }}
-            >
-              {isMenuOpen ? '✕' : '☰'}
-            </button>
-          </div>
-        )}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -109,7 +106,7 @@ export function HRNavbar() {
             <h2 style={{ 
               margin: 0, 
               color: '#ffffff', 
-              fontSize: isMobile ? '1.6rem' : '1.8rem',
+              fontSize: isMobile ? '1rem' : '1.8rem',
               fontWeight: '700',
               fontFamily: 'Baloo 2, sans-serif',
               letterSpacing: '-0.5px'
@@ -118,8 +115,6 @@ export function HRNavbar() {
             </h2>
           </div>          
         </div>
-        {/* Mobile hamburger placed inside left brand container so it's on the left side */}
-       
         
         {/* Center: Desktop Menu */}
         {!isMobile && (
@@ -167,20 +162,11 @@ export function HRNavbar() {
             }}>
               Contract
             </Link>
-            <a href="/payroll" style={{ 
-              textDecoration: 'none', 
-              color: '#a8a8a8ff', 
-              fontSize: '1rem', 
-              fontWeight: '650',
-              fontFamily: 'Baloo 2, sans-serif'
-            }}>
-              Payroll
-            </a>
           </div>
         )}
         
-  {/* Right side: Button and Mobile Menu (hidden on mobile) */}
-  <div style={{ display: 'flex', alignItems: 'center' }}>
+        {/* Right side: Button and Mobile Menu */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           {/* Desktop Button - Hidden on mobile */}
           {/* {!isMobile && (
             <button style={{
@@ -198,23 +184,7 @@ export function HRNavbar() {
             </button>
           )} */}
           
-          {/* Desktop-only button (hidden on mobile) - kept for symmetry if needed */}
-          {/* Hide the hamburger on desktop: only show mobile hamburger (left side) */}
-          <button 
-            onClick={toggleMenu}
-            style={{ 
-              background: 'none',
-              border: '2px solid #fc6544',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
-              padding: '0.5rem',
-              color: '#fc6544',
-              borderRadius: '4px',
-              display: 'none' // ensure no hamburger appears on desktop
-            }}
-          >
-            {isMenuOpen ? '✕' : '☰'}
-          </button>
+          
         </div>
       </div>
 
@@ -278,16 +248,6 @@ export function HRNavbar() {
           }}>
             Contract
           </Link>
-          <a href="/payroll" style={{ 
-            textDecoration: 'none', 
-            color: '#374151', 
-            fontSize: '1rem',
-            padding: '1rem 0',
-            borderBottom: '1px solid #f3f4f6',
-            fontFamily: 'Baloo 2, sans-serif'
-          }}>
-            Payroll
-          </a>
           {/* <button style={{
             backgroundColor: '#374151',
             color: 'white',

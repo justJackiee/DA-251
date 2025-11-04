@@ -167,6 +167,15 @@ export function HRNavbar() {
             }}>
               Contract
             </Link>
+            <a href="/payroll" style={{ 
+              textDecoration: 'none', 
+              color: '#a8a8a8ff', 
+              fontSize: '1rem', 
+              fontWeight: '650',
+              fontFamily: 'Baloo 2, sans-serif'
+            }}>
+              Payroll
+            </a>
           </div>
         )}
         
@@ -269,6 +278,16 @@ export function HRNavbar() {
           }}>
             Contract
           </Link>
+          <a href="/payroll" style={{ 
+            textDecoration: 'none', 
+            color: '#374151', 
+            fontSize: '1rem',
+            padding: '1rem 0',
+            borderBottom: '1px solid #f3f4f6',
+            fontFamily: 'Baloo 2, sans-serif'
+          }}>
+            Payroll
+          </a>
           {/* <button style={{
             backgroundColor: '#374151',
             color: 'white',

@@ -33,31 +33,42 @@ function App() {
       <div className="h-screen flex flex-col">
         <HRNavbar />
         
-        <Routes>
-          <Route path="/dashboard" element={
-             <>
-            <Dashboard />
-            <Pagination />
-          </>
-            } />
-          <Route path="/employeemanagement" element={<h1>Employee Management Page</h1>} />
-          <Route path="/contract" element={<h1>Contract Page</h1>} />
-          <Route path="/timetracking" element={<h1>Time Tracking Page</h1>} />
-          <Route path="/pagination" element={<Pagination />}/>
-          <Route path="/" element={
-       
-              <header className="App-header">
-                <img src={logo} className="App-logo" alt="logo" />
-                <h1 style={{ fontFamily: 'Baloo 2, sans-serif', color: '#06007c' }}>
-                  Welcome to HR Management System
-                </h1>
-                <p style={{ fontFamily: 'Baloo 2, sans-serif', color: '#666' }}>
-                  Click on Dashboard in the navigation to get started!
-                </p>
-              </header>
-           
-          } />
-        </Routes>
+        <main className="flex-1 relative">
+          {/*
+          <PrimaryButton text="Save" onClick={() => alert("Saved!")} />
+          <SecondaryButton text="Cancel" onClick={() => alert("Cancelled!")} />
+          <IconButton icon={<FaSearch />} label="Search" onClick={() => alert("Searching...")} />
+          <IconButton icon={<FaTrash />} label="Delete" onClick={() => alert("Deleted!")} /> */}
+          {/* <DropdownButton
+            label="Select Report"
+            options={[
+              { label: "Monthly Report", onClick: () => alert("Monthly selected") },
+              { label: "Yearly Report", onClick: () => alert("Yearly selected") },
+            ]}
+          /> */}
+
+          <CustomScrollbar>
+            {/* <div className="p-4 md:p-8"> dùng để canh lề (margin)*/}
+            <div className="p-1">
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/employeemanagement/profile" element={<ProfileDetails />} />
+                <Route path="/employeemanagement" element={<EmployeeManagement />} />
+                <Route path="/contract" element={<h1>Contract Page</h1>} />
+                <Route path="/timetracking" element={<TimeTracking />} />
+                <Route path="/payroll" element={<PayrollPage />} />
+                <Route path="/" element={
+                  <header className="App-header">
+                    <img src={logo} className="App-logo" alt="logo" />
+                    <h1>Welcome to HR Management System</h1>
+                    <p>Click on Dashboard in the navigation to get started!</p>
+                  </header>
+                } />
+              </Routes>
+            </div>
+          </CustomScrollbar>
+        </main>
       </div>
     </Router>
     </ThemeProvider>

@@ -1,20 +1,36 @@
 import logo from './logo.svg';
 import './App.css';
+
+import Login from './pages/login';
 import { HRNavbar } from './components/Navbar';
+import CustomScrollbar from './components/schollbar';
 import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
 import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
+import ProfileDetails from "./components/EmployeeProfileDetails/ProfileDetails";
+import {
+  PrimaryButton,
+  SecondaryButton,
+  IconButton,
+  DropdownButton,
+} from "./components/button";
+import PayrollPage from './pages/payroll';
+
+
 import {
     BrowserRouter as Router,
     Routes,
     Route,
 } from "react-router-dom";
+
 import { ThemeProvider } from "@material-tailwind/react";
+import TimeTracking from "./pages/timetracking";
+
 function App() {
   return (
     <ThemeProvider>
     <Router>
-      <div className="App">
+      <div className="h-screen flex flex-col">
         <HRNavbar />
         
         <Routes>

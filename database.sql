@@ -1,3 +1,4 @@
+
 CREATE TABLE company_employee (
     ID VARCHAR(10) PRIMARY KEY,
     Email VARCHAR(100) UNIQUE NOT NULL,

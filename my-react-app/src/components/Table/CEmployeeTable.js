@@ -59,7 +59,7 @@ function CEmployeeTable() {
                                     <td className="py-3 px-4 text-left border-b">{emp.CEType}</td>
                                     <td className="py-3 px-4 text-left border-b">
                                         <button className="text-blue-600 hover:underline font-medium">
-                                            Edit
+                                            <a href="employeemanagement/profile">Edit</a>
                                         </button>
                                     </td>
                                 </tr>

@@ -53,7 +53,7 @@ function App() {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/employeemanagement/profile" element={<ProfileDetails />} />
+                <Route path="/employeemanagement/profile/:id" element={<ProfileDetails />} />
                 <Route path="/employeemanagement" element={<EmployeeManagement />} />
                 <Route path="/contract" element={<h1>Contract Page</h1>} />
                 <Route path="/timetracking" element={<TimeTracking />} />

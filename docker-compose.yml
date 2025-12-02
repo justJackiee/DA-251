@@ -17,8 +17,7 @@ services:
 
 volumes:
   db_data:
-    external: true
-    name: 964b639b173ce8503c6700b0ce4a4e4b18ce76573beb0cc4e594795f555229ef
+    
 
 networks:
   default:

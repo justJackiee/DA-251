@@ -40,7 +40,6 @@ public class EmployeeController {
 
         // 2. Lấy danh sách hợp đồng (Giả sử bạn đã có Repository cho Contract)
         // Nếu chưa có, bạn cần tạo ContractRepository và Entity tương ứng
-        // Tạm thời mình mock dữ liệu trả về để Frontend chạy được đã nhé:
         
         Map<String, Object> response = new HashMap<>();
         
@@ -52,13 +51,12 @@ public class EmployeeController {
         info.put("Email", emp.getEmail());
         info.put("Phone", emp.getPhone());
         info.put("Address", emp.getAddress());
-        info.put("City", "HCMC"); // Tạm hardcode hoặc tách từ address
-        info.put("Department", "Engineering"); // Tạm hardcode
+        info.put("City", "HCMC"); 
+        info.put("Department", "Engineering"); 
         info.put("StartDate", "2025-01-01"); 
 
         response.put("info", info);
         
-        // Mock Contract Data (Sau này bạn query từ DB thật)
         List<Map<String, Object>> contracts = new ArrayList<>();
         Map<String, Object> contract1 = new HashMap<>();
         contract1.put("FullCon_ID", "FC001");
@@ -75,5 +73,69 @@ public class EmployeeController {
         response.put("payslips", new ArrayList<>());
 
         return ResponseEntity.ok(response);
+    }
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateEmployee(@PathVariable Long id, @RequestBody Map<String, String> updates) {
+        try {
+            Employee emp = employeeRepository.findById(id).orElse(null);
+            if (emp == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            System.out.println("Received updates: " + updates); // Debug log
+
+            // Update fields if they exist in the request
+            if (updates.containsKey("Name")) {
+                String fullName = updates.get("Name").trim();
+                String[] names = fullName.split("\\s+"); // Split by whitespace
+
+                if (names.length > 0) {
+                    emp.setFName(names[0]); // First word is First Name
+                }
+                
+                if (names.length == 1) {
+                    // Only one name provided
+                    emp.setMName(null);
+                    emp.setLName(""); // Or keep null depending on DB constraints
+                } else if (names.length == 2) {
+                    // Two names provided (First + Last)
+                    emp.setMName(null); // CLEAR the middle name
+                    emp.setLName(names[1]);
+                } else {
+                    // Three or more names (First + Middle + Last)
+                    // Everything between first and last becomes Middle Name
+                    String middleName = "";
+                    for (int i = 1; i < names.length - 1; i++) {
+                        middleName += names[i] + " ";
+                    }
+                    emp.setMName(middleName.trim());
+                    emp.setLName(names[names.length - 1]);
+                }
+            }
+            if (updates.containsKey("Phone")) {
+                emp.setPhone(updates.get("Phone"));
+            }
+            if (updates.containsKey("Email")) {
+                emp.setEmail(updates.get("Email"));
+            }
+            if (updates.containsKey("Address")) {
+                emp.setAddress(updates.get("Address"));
+            }
+            if (updates.containsKey("Position")) {
+                emp.setType(updates.get("Position"));
+            }
+            
+            System.out.println("About to save employee: " + emp); // Debug log
+
+            employeeRepository.save(emp);
+            
+            return ResponseEntity.ok(Map.of("success", true, "message", "Profile updated successfully"));
+        } catch (Exception e) {
+            e.printStackTrace(); // This will show the exact error in your console
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
 }

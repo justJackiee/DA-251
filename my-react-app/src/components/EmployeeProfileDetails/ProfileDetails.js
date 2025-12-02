@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom"; 
-import { Edit2, ChevronLeft, Briefcase } from "lucide-react";
+import { Edit2, ChevronLeft, Briefcase, X } from "lucide-react";
 import axios from "axios"; 
-import TOC from "./TOC";
 import CustomScrollbar from "../schollbar";
 
 export default function ProfileDetails() {
@@ -12,6 +11,8 @@ export default function ProfileDetails() {
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -31,12 +32,70 @@ export default function ProfileDetails() {
     }
   }, [id]);
 
-  const tocItems = [
-    { id: "general-info", label: "General Information", level: 1 },
-    { id: "job-section", label: "Job", level: 1 },
-    { id: "contract-section", label: "Contract", level: 1 },
-    { id: "payslip-section", label: "Payslip", level: 1 },
-  ];
+  const handleEditClick = () => {
+    if (employeeData?.info) {
+      setEditFormData({
+        Name: employeeData.info.Name || '',
+        Phone: employeeData.info.Phone || '',
+        Email: employeeData.info.Email || '',
+        Address: employeeData.info.Address || '',
+        City: employeeData.info.City || '',
+        Position: employeeData.info.Position || '',
+        Department: employeeData.info.Department || '',
+        StartDate: employeeData.info.StartDate || ''
+      });
+      setShowEditModal(true);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      // Log the data being sent
+      console.log("Sending update:", editFormData);
+      
+      const response = await axios.put(
+        `http://localhost:5000/api/employees/${id}`,
+        editFormData,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log("Update response:", response.data);
+      
+      // Refresh the profile data from server
+      const refreshResponse = await axios.get(`http://localhost:5000/api/employees/${id}/profile`);
+      setEmployeeData(refreshResponse.data);
+      
+      setShowEditModal(false);
+      alert('Profile updated successfully!');
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      console.error("Error details:", err.response?.data);
+      
+      // More detailed error message
+      let errorMsg = 'Failed to update profile. ';
+      if (err.response) {
+        errorMsg += `Server error: ${err.response.status} - ${err.response.data?.message || err.response.statusText}`;
+      } else if (err.request) {
+        errorMsg += 'No response from server. Please check if the backend is running.';
+      } else {
+        errorMsg += err.message;
+      }
+      
+      alert(errorMsg);
+    }
+  };
 
   if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
   if (error) return <div className="p-10 text-center text-red-500">{error}</div>;
@@ -56,16 +115,14 @@ export default function ProfileDetails() {
             </button>
             <div>
               <h2 className="text-xl font-semibold">{info.Name}</h2>
-              {/* Vì backend đang map Type vào Position, nên hiển thị Position ở đây là đúng */}
               <p className="text-sm text-gray-500">{info.Position}</p>
             </div>
           </div>
           
-          {/* SỬA Ở ĐÂY: Hiển thị động theo info.Position và đổi màu tương ứng */}
           <span className={`text-xs font-medium px-3 py-1 rounded-full 
             ${info.Position === 'Fulltime' 
-              ? 'bg-green-100 text-green-700'  // Nếu là Fulltime thì màu xanh
-              : 'bg-orange-100 text-orange-700' // Nếu là Freelance thì màu cam
+              ? 'bg-green-100 text-green-700'
+              : 'bg-orange-100 text-orange-700'
             }`}>
             {info.Position}
           </span>
@@ -78,30 +135,24 @@ export default function ProfileDetails() {
           
           {/* General Info */}
           <section id="general-info" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
-            <SectionHeader title="General Information" content="Edit" />
+            <SectionHeader title="General Information" content="Edit" onEdit={handleEditClick} />
             <SubSection title="Personal Information">
               <InfoGrid data={{ "Employee ID": info.ID, Phone: info.Phone, Email: info.Email, Sex: "N/A" }} />
             </SubSection>
             <SubSection title="Address Information">
               <InfoGrid data={{ Address: info.Address, City: info.City }} />
             </SubSection>
-          </section>
-
-          {/* Job Section */}
-          <section id="job-section" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
-            <SectionHeader title="Job" content="Edit"/>
             <SubSection title="Employment Information">
               <InfoGrid data={{ "Job Title": info.Position, Department: info.Department, "Start Date": info.StartDate }} />
             </SubSection>
           </section>
 
-          {/* Contract Section - ĐÃ SỬA LỖI HIỂN THỊ */}
+          {/* Contract Section */}
           <section id="contract-section" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
             <SectionHeader title="Contract" showEdit={false} />
             
             {contracts && contracts.length > 0 ? (
               <>
-                {/* Nếu nhiều hơn 2 hợp đồng -> Dùng thanh cuộn (CustomScrollbar) */}
                 {contracts.length > 2 ? (
                   <div className="h-[450px]">
                     <CustomScrollbar>
@@ -113,7 +164,6 @@ export default function ProfileDetails() {
                     </CustomScrollbar>
                   </div>
                 ) : (
-                  /* Nếu ít hợp đồng (<= 2) -> Dùng div thường để tránh lỗi ẩn nội dung */
                   <div className="space-y-4">
                     {contracts.map((contract) => (
                       <ContractItem key={contract.FullCon_ID} contract={contract} />
@@ -128,7 +178,7 @@ export default function ProfileDetails() {
 
           {/* Payslip Section */}
           <section id="payslip-section" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
-             <SectionHeader title="Payslip" showEdit={false} />
+             <SectionHeader title="Payslip" showEdit={true} content={"Show History"} />
              {latestPayslip ? (
                 <SubSection title="Latest Earning">
                    <InfoGrid data={{ "Month": latestPayslip.Month, "Net Pay": latestPayslip.NetPay }} />
@@ -136,18 +186,155 @@ export default function ProfileDetails() {
              ) : <div>No payslip data</div>}
           </section>
         </div>
-
-        <div className="col-span-3 sticky top-6">
-          <TOC items={tocItems} />
-        </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
+              <h2 className="text-xl font-semibold text-gray-800">Edit Employee Information</h2>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="space-y-6">
+                {/* Personal Information */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">Personal Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        name="Name"
+                        value={editFormData.Name}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Phone</label>
+                      <input
+                        type="text"
+                        name="Phone"
+                        value={editFormData.Phone}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm text-gray-600 mb-1">Email</label>
+                      <input
+                        type="email"
+                        name="Email"
+                        value={editFormData.Email}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Information */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">Address Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm text-gray-600 mb-1">Address</label>
+                      <input
+                        type="text"
+                        name="Address"
+                        value={editFormData.Address}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">City</label>
+                      <input
+                        type="text"
+                        name="City"
+                        value={editFormData.City}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Employment Information */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">Employment Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Position</label>
+                      <select
+                        name="Position"
+                        value={editFormData.Position}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="Fulltime">Fulltime</option>
+                        <option value="Freelance">Freelance</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Department</label>
+                      <input
+                        type="text"
+                        name="Department"
+                        value={editFormData.Department}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        name="StartDate"
+                        value={editFormData.StartDate}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 flex-shrink-0">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-6 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// --- CÁC COMPONENT CON (Được định nghĩa ở đây) ---
+// --- COMPONENT DEFINITIONS ---
 
-// 1. ContractItem: Component hiển thị từng cái thẻ hợp đồng
 function ContractItem({ contract }) {
   return (
     <div className={`border rounded-xl p-4 transition-colors ${contract.Status === 'Active' ? 'bg-green-50 border-green-100' : 'bg-gray-50 border-gray-100 opacity-80'}`}>
@@ -167,7 +354,6 @@ function ContractItem({ contract }) {
           <InfoGrid data={{ "Start Date": contract.StartDate, "End Date": contract.EndDate || "Indefinite" }} />
         </SubSection>
         <SubSection title="Compensation" className="mb-0">
-          {/* Dùng Number().toLocaleString() để format tiền tệ đẹp hơn */}
           <InfoGrid data={{ "Base Salary": contract.BaseSalary ? `${Number(contract.BaseSalary).toLocaleString()} VND` : 'N/A' }} />
         </SubSection>
       </div>
@@ -175,9 +361,20 @@ function ContractItem({ contract }) {
   );
 }
 
-// 2. Các component khác
-function SectionHeader({ title, showEdit = true, content }) { 
-  return <div className="mb-4 border-b pb-2 font-bold flex justify-between"><h3>{title}</h3>{showEdit && <button className="text-sm text-orange-500"><Edit2 className="w-4 h-4 inline"/> {content}</button>}</div> 
+function SectionHeader({ title, showEdit = true, content, onEdit }) { 
+  return (
+    <div className="mb-4 border-b pb-2 font-bold flex justify-between">
+      <h3>{title}</h3>
+      {showEdit && (
+        <button 
+          onClick={onEdit}
+          className="text-sm text-orange-500 hover:text-orange-600 transition-colors"
+        >
+          <Edit2 className="w-4 h-4 inline"/> {content}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function SubSection({ title, children, className="" }) { 

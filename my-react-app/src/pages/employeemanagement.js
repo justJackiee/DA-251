@@ -1,17 +1,56 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios"; // 1. Import axios
 import CEmployeeTable from "../components/Table/CEmployeeTable";
-import HeaderTabs from '../components/HeaderTabs';
+// import HeaderTabs from '../components/HeaderTabs';
 import FiltersBar from '../components/FiltersBar';
 
+
+
 function EmployeeManagement() {
-  const [activeTab, setActiveTab] = useState('team');
+  // const [activeTab, setActiveTab] = useState('team');
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ office: '', department: '' });
+  const [filters, setFilters] = useState({ office: '', department: '', position: '', gender: '', type: '', status: '' });
   
   // 2. Khởi tạo data là mảng rỗng ban đầu (thay vì mock data)
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // derive unique positions from fetched data for filter options
+  const positions = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    const set = new Set();
+    data.forEach((d) => {
+      if (d.position) set.add(d.position);
+    });
+    return Array.from(set);
+  }, [data]);
+
+  const genders = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    const set = new Set();
+    data.forEach((d) => {
+      if (d.sex) set.add(d.sex);
+    });
+    return Array.from(set);
+  }, [data]);
+
+  const types = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    const set = new Set();
+    data.forEach((d) => {
+      if (d.type) set.add(d.type);
+    });
+    return Array.from(set);
+  }, [data]);
+
+  const statuses = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    const set = new Set();
+    data.forEach((d) => {
+      if (d.status) set.add(d.status);
+    });
+    return Array.from(set);
+  }, [data]);
 
  // 3. Gọi API từ Backend khi component được load
   useEffect(() => {
@@ -55,22 +94,26 @@ function EmployeeManagement() {
   }, []);
 
   const onFilterChange = (k, v) => setFilters((s) => ({ ...s, [k]: v }));
-  const onClear = () => { setSearch(''); setFilters({ office: '', department: '' }); };
+  const onClear = () => { setSearch(''); setFilters({ office: '', department: '', position: '', gender: '', type: '', status: '' }); };
 
   const filteredData = useMemo(() => {
     return data.filter(emp => {
-      const searchLower = search.toLowerCase();
-      // Logic search cũ của bạn giữ nguyên
-      const matchSearch = (emp.fullName && emp.fullName.toLowerCase().includes(searchLower)) || 
-                          (emp.email && emp.email.toLowerCase().includes(searchLower));
-      
-      // Logic filter
-      // Lưu ý: Nếu database chưa chuẩn department/office thì bộ lọc này có thể lọc hết dữ liệu.
-      // Tạm thời tôi để logic lỏng hơn: Nếu filter rỗng thì luôn true.
-      const matchDept = filters.department ? emp.department === filters.department : true;
-      const matchOffice = filters.office ? (emp.location && emp.location.includes(filters.office)) : true;
-      
-      return matchSearch && matchDept && matchOffice;
+      const searchLower = (search || '').toLowerCase();
+      const safeFull = (emp.fullName || '').toLowerCase();
+      const safeEmail = (emp.email || '').toLowerCase();
+      const matchSearch = (safeFull.includes(searchLower)) || (safeEmail.includes(searchLower));
+
+      // department / office matching (case-insensitive)
+      const matchDept = filters.department ? ((emp.department || '').toLowerCase() === (filters.department || '').toLowerCase()) : true;
+      const matchOffice = filters.office ? ((emp.location || '').toLowerCase().includes((filters.office || '').toLowerCase())) : true;
+
+      // new filters: position, gender (sex), type, status
+      const matchPosition = filters.position ? ((emp.position || '').toLowerCase().trim() === (filters.position || '').toLowerCase().trim()) : true;
+      const matchGender = filters.gender ? ((emp.sex || '').toLowerCase().trim() === (filters.gender || '').toLowerCase().trim()) : true;
+      const matchType = filters.type ? ((emp.type || '').toLowerCase().trim() === (filters.type || '').toLowerCase().trim()) : true;
+      const matchStatus = filters.status ? ((emp.status || '').toLowerCase().trim() === (filters.status || '').toLowerCase().trim()) : true;
+
+      return matchSearch && matchDept && matchOffice && matchPosition && matchGender && matchType && matchStatus;
     });
   }, [data, search, filters]);
 
@@ -80,8 +123,12 @@ function EmployeeManagement() {
 
   return (
     <div>
-      <HeaderTabs active={activeTab} onTabChange={setActiveTab} />
-      <FiltersBar search={search} onSearch={setSearch} filters={filters} onFilterChange={onFilterChange} onClear={onClear} />
+      {/* <HeaderTabs active={activeTab} onTabChange={setActiveTab} /> */}
+      <div className="flex justify-end">
+        
+      </div>
+      <FiltersBar search={search} onSearch={setSearch} filters={filters} onFilterChange={onFilterChange} onClear={onClear} positions={positions} genders={genders} types={types} statuses={statuses} />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <CEmployeeTable data={filteredData} search={search} filters={filters} />
       </div>

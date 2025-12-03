@@ -1,0 +1,2 @@
+#  Ignore PostgreSQL data directory by docker
+postgres_data/

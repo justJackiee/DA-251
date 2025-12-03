@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from 'react-dom';
 
 function CEmployeeTable({ 
   // SỬA LỖI 2: Nhận prop 'data' thay vì 'employees' để khớp với file cha
@@ -19,7 +20,7 @@ function CEmployeeTable({
     { header: "Email", accessor: "email" },
     { header: "Phone", accessor: "phone" },
     { 
-      header: "Sex", 
+      header: "Gender", 
       // Sửa logic render giới tính
       render: (row) => row.sex === 'M' ? 'Male' : row.sex === 'F' ? 'Female' : row.sex 
     },
@@ -35,6 +36,18 @@ function CEmployeeTable({
           {row.type}
         </span>
       )
+    },
+    {
+      header: "Status",
+      render: (row) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            row.status === "Active" ? "bg-green-100 text-green-700" : 
+            row.status === "Inactive" ? "bg-red-100 text-red-700" : 
+            "bg-gray-100 text-gray-700"
+        }`}>
+          {row.status}
+        </span>
+      )
     }
   ];
 
@@ -46,6 +59,47 @@ function CEmployeeTable({
     } else {
       window.location.href = `/employeemanagement/profile/${item.id}`;
     }
+  };
+
+  // Dropdown menu state
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function onDocClick(e) {
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpenMenuId(null);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') setOpenMenuId(null);
+    }
+    if (openMenuId !== null) {
+      document.addEventListener('click', onDocClick);
+      document.addEventListener('keydown', onKey);
+      return () => {
+        document.removeEventListener('click', onDocClick);
+        document.removeEventListener('keydown', onKey);
+      };
+    }
+  }, [openMenuId]);
+
+  const openMenu = (e, item) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX });
+    setOpenMenuId(item.id);
+  };
+
+  const handleEditAction = (item) => {
+    setOpenMenuId(null);
+    handleEdit(item);
+  };
+
+  const handleEditForm = (item) => {
+    setOpenMenuId(null);
+    if (onEdit) return onEdit(item);
+    window.location.href = `/employeemanagement/edit/${item.id}`;
   };
 
   return (
@@ -85,9 +139,35 @@ function CEmployeeTable({
                     ))}
                     {showActions && (
                       <td className="py-3 px-4 text-left border-b text-sm">
-                        <button onClick={() => handleEdit(item)} className="text-blue-600 hover:underline font-medium">
-                          View
-                        </button>
+                        <div className="relative inline-block">
+                          <button
+                            onClick={(e) => openMenu(e, item)}
+                            className="p-1 rounded hover:bg-gray-100 text-gray-600 hover:text-blue-600"
+                            aria-haspopup="menu"
+                            aria-expanded={openMenuId === item.id}
+                            aria-label={`Actions for ${item.fullName || item.id}`}
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <circle cx="12" cy="6" r="1.5" />
+                              <circle cx="12" cy="12" r="1.5" />
+                              <circle cx="12" cy="18" r="1.5" />
+                            </svg>
+                          </button>
+
+                          {openMenuId === item.id && createPortal(
+                            <div
+                              ref={menuRef}
+                              role="menu"
+                              aria-label="Row actions"
+                              className="bg-white border rounded shadow-lg z-50 py-1"
+                              style={{ position: 'absolute', top: menuPos.top + 'px', left: menuPos.left + 'px', minWidth: 120 }}
+                            >
+                              <button onClick={() => handleEditAction(item)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">View</button>
+                              <button onClick={() => handleEditForm(item)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">Edit</button>
+                            </div>,
+                            typeof document !== 'undefined' ? document.body : null
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom"; 
-import { Edit2, ChevronLeft, Briefcase, X } from "lucide-react";
+import { Edit2, ChevronLeft, Briefcase, X, Calendar } from "lucide-react";
 import axios from "axios"; 
 import CustomScrollbar from "../schollbar";
 
@@ -13,6 +13,10 @@ export default function ProfileDetails() {
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
+
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [payslipHistory, setPayslipHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -94,6 +98,22 @@ export default function ProfileDetails() {
     }
   };
 
+  // Hàm xử lý hiển thị lịch sử lương
+  const handleShowHistory = async () => {
+    setShowHistoryModal(true); // Mở modal ngay
+    setLoadingHistory(true);   // Hiện loading
+    try {
+      // Gọi API Backend để lấy lịch sử lương
+      const response = await axios.get(`http://localhost:5000/api/employees/${id}/payslip-history`);
+      setPayslipHistory(response.data);
+    } catch (err) {
+      console.error("Lỗi lấy lịch sử lương:", err);
+      // alert("Không thể tải lịch sử lương"); // Có thể bỏ alert nếu muốn UX mượt hơn
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
   if (error) return <div className="p-10 text-center text-red-500">{error}</div>;
   if (!employeeData) return null;
@@ -128,7 +148,7 @@ export default function ProfileDetails() {
 
       <div className="grid grid-cols-12 gap-6 items-start">
         {/* Left Content */}
-        <div className="col-span-9 space-y-6">
+        <div className="col-span-12 space-y-6">
           
           {/* General Info */}
           <section id="general-info" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
@@ -175,10 +195,10 @@ export default function ProfileDetails() {
 
           {/* Payslip Section */}
           <section id="payslip-section" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
-             <SectionHeader title="Payslip" showEdit={true} content={"Show History"} />
+             <SectionHeader title="Payslip" showEdit={true} content={"Show History"} onEdit={handleShowHistory} />
              {latestPayslip ? (
                 <SubSection title="Latest Earning">
-                   <InfoGrid data={{ "Month": latestPayslip.Month, "Net Pay": latestPayslip.NetPay }} />
+                   <InfoGrid data={{ "Month": latestPayslip.month, "Net Pay": latestPayslip.netPay }} />
                 </SubSection>
              ) : <div>No payslip data</div>}
           </section>
@@ -321,6 +341,66 @@ export default function ProfileDetails() {
                 className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payslip History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-orange-500"/>
+                Payslip History
+              </h2>
+              <button onClick={() => setShowHistoryModal(false)} className="p-1 hover:bg-gray-200 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-0 overflow-y-auto max-h-[60vh]">
+              {loadingHistory ? (
+                <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
+              ) : payslipHistory.length > 0 ? (
+                <div className="divide-y divide-gray-100">
+                  {payslipHistory.map((item, index) => (
+                    <div key={index} className="p-4 hover:bg-orange-50 transition-colors flex justify-between items-center group">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-orange-100 p-2 rounded-lg text-orange-600">
+                            <Calendar className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800">Tháng {item.month}/{item.year}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${item.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {item.status || 'Paid'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-800 flex items-center justify-end gap-1">
+                           {item.netPay ? Number(item.netPay).toLocaleString() : 0} <span className="text-xs text-gray-500">VND</span>
+                        </p>
+                        <p className="text-xs text-green-600 font-medium">Thực lãnh</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-400 italic">
+                    <p>Chưa có lịch sử lương nào.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t bg-gray-50 text-center">
+              <button onClick={() => setShowHistoryModal(false)} className="text-sm text-gray-500 hover:text-gray-800 font-medium">
+                Đóng
               </button>
             </div>
           </div>

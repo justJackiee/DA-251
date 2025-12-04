@@ -10,6 +10,9 @@ import com.example.demo.entity.FulltimeContract;
 import com.example.demo.entity.FreelanceContract;
 import com.example.demo.repository.FulltimeContractRepository;
 import com.example.demo.repository.FreelanceContractRepository;
+import com.example.demo.entity.PayslipHistoryDTO;
+import com.example.demo.repository.FulltimePayslipRepository;
+import com.example.demo.repository.FreelancePayslipRepository;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +30,12 @@ public class EmployeeController {
     private FulltimeContractRepository fulltimeContractRepository;
     @Autowired
     private FreelanceContractRepository freelanceContractRepository;
+
+    @Autowired
+    private FulltimePayslipRepository fulltimeRepo;
+
+    @Autowired
+    private FreelancePayslipRepository freelanceRepo;
 
     @GetMapping
     public List<Employee> getAll() {
@@ -89,7 +98,22 @@ public class EmployeeController {
         }
         
         response.put("contracts", contractsList);
-        response.put("payslips", new ArrayList<>()); 
+        
+        List<PayslipHistoryDTO> latestPayslip = new ArrayList<>();
+        
+        // Kiểm tra xem nhân viên là Fulltime hay Freelance để gọi đúng Repo
+        if ("Fulltime".equalsIgnoreCase(emp.getType())) {
+            List<PayslipHistoryDTO> ftLatest = fulltimeRepo.findLatest(id);
+            if (ftLatest != null && !ftLatest.isEmpty()) {
+                latestPayslip.addAll(ftLatest);
+            }
+        } else { // Freelance
+            List<PayslipHistoryDTO> flLatest = freelanceRepo.findLatest(id);
+            if (flLatest != null && !flLatest.isEmpty()) {
+                latestPayslip.addAll(flLatest);
+            }
+        }
+        response.put("payslips", latestPayslip);
 
         return ResponseEntity.ok(response);
     }
@@ -200,5 +224,28 @@ public class EmployeeController {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
         }
+    }
+    // --- API: LẤY LỊCH SỬ LƯƠNG ---
+    @GetMapping("/{id}/payslip-history")
+    public ResponseEntity<List<PayslipHistoryDTO>> getPayslipHistory(@PathVariable Long id) {
+        
+        List<PayslipHistoryDTO> history = new ArrayList<>();
+
+        // 1. Lấy dữ liệu từ bảng Fulltime
+        List<PayslipHistoryDTO> ftList = fulltimeRepo.findHistory(id);
+        if (ftList != null) history.addAll(ftList);
+
+        // 2. Lấy dữ liệu từ bảng Freelance
+        List<PayslipHistoryDTO> flList = freelanceRepo.findHistory(id);
+        if (flList != null) history.addAll(flList);
+
+        // 3. Sắp xếp giảm dần theo thời gian (Năm -> Tháng)
+        history.sort((a, b) -> {
+            int yearCompare = b.getYear().compareTo(a.getYear());
+            if (yearCompare != 0) return yearCompare;
+            return b.getMonth().compareTo(a.getMonth());
+        });
+
+        return ResponseEntity.ok(history);
     }
 }

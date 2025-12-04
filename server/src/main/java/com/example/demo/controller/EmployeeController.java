@@ -5,6 +5,11 @@ import com.example.demo.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.demo.dto.EmployeeCreationRequest;
+import com.example.demo.entity.FulltimeContract;
+import com.example.demo.entity.FreelanceContract;
+import com.example.demo.repository.FulltimeContractRepository;
+import com.example.demo.repository.FreelanceContractRepository;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,13 +23,16 @@ public class EmployeeController {
 
     @Autowired
     private EmployeeRepository employeeRepository;
+    @Autowired
+    private FulltimeContractRepository fulltimeContractRepository;
+    @Autowired
+    private FreelanceContractRepository freelanceContractRepository;
 
     @GetMapping
     public List<Employee> getAll() {
         return employeeRepository.findAll();
     }
 
-    // Sửa String id thành Long id
     @GetMapping("/{id}")
     public Employee getById(@PathVariable Long id) {
         return employeeRepository.findById(id).orElse(null);
@@ -32,18 +40,13 @@ public class EmployeeController {
 
     @GetMapping("/{id}/profile")
     public ResponseEntity<?> getEmployeeProfile(@PathVariable Long id) {
-        // 1. Lấy thông tin cơ bản
+        // Fetch Employee
         Employee emp = employeeRepository.findById(id).orElse(null);
-        if (emp == null) {
-            return ResponseEntity.notFound().build();
-        }
+        if (emp == null) return ResponseEntity.notFound().build();
 
-        // 2. Lấy danh sách hợp đồng (Giả sử bạn đã có Repository cho Contract)
-        // Nếu chưa có, bạn cần tạo ContractRepository và Entity tương ứng
-        
         Map<String, Object> response = new HashMap<>();
         
-        // Thông tin cơ bản
+        // Map Basic Info
         Map<String, Object> info = new HashMap<>();
         info.put("ID", emp.getId());
         info.put("Name", emp.getFName() + " " + emp.getLName());
@@ -54,26 +57,43 @@ public class EmployeeController {
         info.put("City", "HCMC"); 
         info.put("Department", "Engineering"); 
         info.put("StartDate", "2025-01-01"); 
-
         response.put("info", info);
         
-        List<Map<String, Object>> contracts = new ArrayList<>();
-        Map<String, Object> contract1 = new HashMap<>();
-        contract1.put("FullCon_ID", "FC001");
-        contract1.put("StartDate", "2025-01-01");
-        contract1.put("EndDate", null);
-        contract1.put("BaseSalary", 20000000);
-        contract1.put("Type", "Indefinite");
-        contract1.put("Status", "Active");
-        contracts.add(contract1);
+        // Fetch REAL Contracts (Dynamic)
+        List<Map<String, Object>> contractsList = new ArrayList<>();
+
+        if ("Fulltime".equalsIgnoreCase(emp.getType())) {
+            List<FulltimeContract> fContracts = fulltimeContractRepository.findByEmployeeId(id);
+            for (FulltimeContract fc : fContracts) {
+                Map<String, Object> contractMap = new HashMap<>();
+                contractMap.put("FullCon_ID", fc.getContractId());
+                contractMap.put("StartDate", fc.getStartDate());
+                contractMap.put("EndDate", fc.getEndDate());
+                contractMap.put("BaseSalary", fc.getBaseSalary());
+                contractMap.put("Type", fc.getType());
+                contractMap.put("Status", "Active"); 
+                contractsList.add(contractMap);
+            }
+        } else if ("Freelance".equalsIgnoreCase(emp.getType())) {
+            List<FreelanceContract> flContracts = freelanceContractRepository.findByEmployeeId(id);
+            for (FreelanceContract flc : flContracts) {
+                Map<String, Object> contractMap = new HashMap<>();
+                contractMap.put("FullCon_ID", flc.getContractId());
+                contractMap.put("StartDate", flc.getStartDate());
+                contractMap.put("EndDate", flc.getEndDate());
+                contractMap.put("BaseSalary", flc.getValue());
+                contractMap.put("Type", "Project");
+                contractMap.put("Status", "Active");
+                contractsList.add(contractMap);
+            }
+        }
         
-        response.put("contracts", contracts);
-        
-        // Mock Payslip Data
-        response.put("payslips", new ArrayList<>());
+        response.put("contracts", contractsList);
+        response.put("payslips", new ArrayList<>()); 
 
         return ResponseEntity.ok(response);
     }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> updateEmployee(@PathVariable Long id, @RequestBody Map<String, String> updates) {
         try {
@@ -82,7 +102,7 @@ public class EmployeeController {
                 return ResponseEntity.notFound().build();
             }
 
-            System.out.println("Received updates: " + updates); // Debug log
+            System.out.println("Received updates: " + updates); 
 
             // Update fields if they exist in the request
             if (updates.containsKey("Name")) {
@@ -94,16 +114,12 @@ public class EmployeeController {
                 }
                 
                 if (names.length == 1) {
-                    // Only one name provided
                     emp.setMName(null);
-                    emp.setLName(""); // Or keep null depending on DB constraints
+                    emp.setLName(""); 
                 } else if (names.length == 2) {
-                    // Two names provided (First + Last)
-                    emp.setMName(null); // CLEAR the middle name
+                    emp.setMName(null); 
                     emp.setLName(names[1]);
                 } else {
-                    // Three or more names (First + Middle + Last)
-                    // Everything between first and last becomes Middle Name
                     String middleName = "";
                     for (int i = 1; i < names.length - 1; i++) {
                         middleName += names[i] + " ";
@@ -125,17 +141,64 @@ public class EmployeeController {
                 emp.setType(updates.get("Position"));
             }
             
-            System.out.println("About to save employee: " + emp); // Debug log
+            System.out.println("About to save employee: " + emp); 
 
             employeeRepository.save(emp);
             
             return ResponseEntity.ok(Map.of("success", true, "message", "Profile updated successfully"));
         } catch (Exception e) {
-            e.printStackTrace(); // This will show the exact error in your console
+            e.printStackTrace(); 
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "Error: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+    @PostMapping
+    public ResponseEntity<?> createEmployee(@RequestBody EmployeeCreationRequest request) {
+        try {
+            Employee emp = new Employee();
+            emp.setFName(request.getFName());
+            emp.setLName(request.getLName());
+            emp.setSex(request.getSex());
+            emp.setPhone(request.getPhone());
+            emp.setEmail(request.getEmail());
+            emp.setAddress(request.getAddress());
+            emp.setDob(request.getDob());
+            emp.setType(request.getType()); 
+            emp.setStatus("Active");
+            emp.setUsername(request.getUsername());
+            emp.setPassword(request.getPassword()); 
+            emp.setBankAccountNumber(request.getBankAccountNumber());
+
+            Employee savedEmp = employeeRepository.save(emp);
+
+            if ("Fulltime".equalsIgnoreCase(request.getType())) {
+                FulltimeContract contract = new FulltimeContract();
+                contract.setEmployeeId(savedEmp.getId());
+                contract.setStartDate(request.getContract().getStartDate());
+                contract.setEndDate(request.getContract().getEndDate());
+                contract.setBaseSalary(request.getContract().getBaseSalary());
+                contract.setOtRate(request.getContract().getOtRate());
+                contract.setAnnualLeaveDays(request.getContract().getAnnualLeaveDays());
+                contract.setType(request.getContract().getContractType()); 
+                fulltimeContractRepository.save(contract);
+
+            } else if ("Freelance".equalsIgnoreCase(request.getType())) {
+                FreelanceContract contract = new FreelanceContract();
+                contract.setEmployeeId(savedEmp.getId());
+                contract.setStartDate(request.getContract().getStartDate());
+                contract.setEndDate(request.getContract().getEndDate());
+                contract.setValue(request.getContract().getContractValue());
+                contract.setCommittedDeadline(request.getContract().getCommittedDeadline());
+                
+                freelanceContractRepository.save(contract);
+            }
+            return ResponseEntity.ok(Map.of("success", true, "message", "Employee and Contract created!", "id", savedEmp.getId()));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
         }
     }
 }

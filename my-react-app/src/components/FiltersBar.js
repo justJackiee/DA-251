@@ -1,28 +1,33 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { FaSearch } from 'react-icons/fa';
-import { FaPlus } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import AddEmployeeModal from './AddEmployeeModal'; 
 
-
-export default function FiltersBar({ search, onSearch, filters, onFilterChange, onClear, positions = [], genders = [], types = [], statuses = [] }) {
+export default function FiltersBar({ 
+    search, 
+    onSearch, 
+    filters, 
+    onFilterChange, 
+    onClear, 
+    positions = [], 
+    genders = [], 
+    types = [], 
+    statuses = [],
+    onAddSuccess 
+}) {
   const [open, setOpen] = useState(false);
   const popupRef = useRef(null);
   const buttonRef = useRef(null);
   const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
-   const navigate = useNavigate();
 
   // normalize incoming option lists: ensure strings, unique and sorted
   const normalize = (arr) => {
     if (!arr || !Array.isArray(arr)) return [];
-    const cleaned = arr
-      .map((a) => {
+    const cleaned = arr.map((a) => {
         if (a == null) return '';
         if (typeof a === 'object') return String(a.name ?? a.value ?? '');
         return String(a);
-      })
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+      }).map((s) => s.trim()).filter((s) => s.length > 0);
     return Array.from(new Set(cleaned)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   };
 
@@ -43,11 +48,7 @@ export default function FiltersBar({ search, onSearch, filters, onFilterChange, 
       if (e.key === 'Escape') setOpen(false);
     }
     document.addEventListener('click', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('click', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => document.removeEventListener('click', onDocClick);
   }, []);
 
   // compute popup position anchored to button
@@ -55,10 +56,7 @@ export default function FiltersBar({ search, onSearch, filters, onFilterChange, 
     function updatePos() {
       if (!buttonRef.current) return;
       const rect = buttonRef.current.getBoundingClientRect();
-      setPopupPos({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX,
-      });
+      setPopupPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX });
     }
     if (open) {
       updatePos();
@@ -74,7 +72,7 @@ export default function FiltersBar({ search, onSearch, filters, onFilterChange, 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div className="bg-white p-4 rounded-md shadow-sm flex flex-col md:flex-row md:items-center gap-3 overflow-visible relative z-50">
-        {/* Search: flexible on larger screens, full width on small */}
+        
         <div className="flex items-center w-full md:w-1/3 bg-gray-100 rounded-md px-3 py-2 min-w-0">
           <FaSearch className="text-gray-400 mr-2 flex-shrink-0" />
           <input
@@ -86,7 +84,7 @@ export default function FiltersBar({ search, onSearch, filters, onFilterChange, 
           />
         </div>
 
-        {/* Filter button that opens a popup with filter controls */}
+        {/* Filter Button */}
         <div className="relative ml-3">
           <button
             ref={buttonRef}
@@ -99,6 +97,7 @@ export default function FiltersBar({ search, onSearch, filters, onFilterChange, 
             Filters
           </button>
 
+          {/* Filter Popup Portal */}
           {open && popupRef && createPortal(
             <div
               ref={popupRef}
@@ -200,18 +199,12 @@ export default function FiltersBar({ search, onSearch, filters, onFilterChange, 
                 </div>
               </div>
             </div>,
-            // render portal into body so it won't be clipped by parent overflow
             typeof document !== 'undefined' ? document.body : null
           )}
         </div>
-        <button
-          onClick={() => navigate('/employees/new')}
-          className="ml-auto inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md shadow-sm text-sm"
-          aria-label="Add new"
-        >
-          <FaPlus />
-          <span className="hidden sm:inline">Add new</span>
-        </button>
+
+        <AddEmployeeModal onSuccess={onAddSuccess} />
+        
       </div>
     </div>
   );

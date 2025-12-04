@@ -58,7 +58,6 @@ export default function ProfileDetails() {
 
   const handleSaveEdit = async () => {
     try {
-      // Log the data being sent
       console.log("Sending update:", editFormData);
       
       const response = await axios.put(
@@ -73,7 +72,6 @@ export default function ProfileDetails() {
       
       console.log("Update response:", response.data);
       
-      // Refresh the profile data from server
       const refreshResponse = await axios.get(`http://localhost:5000/api/employees/${id}/profile`);
       setEmployeeData(refreshResponse.data);
       
@@ -83,7 +81,6 @@ export default function ProfileDetails() {
       console.error("Error updating profile:", err);
       console.error("Error details:", err.response?.data);
       
-      // More detailed error message
       let errorMsg = 'Failed to update profile. ';
       if (err.response) {
         errorMsg += `Server error: ${err.response.status} - ${err.response.data?.message || err.response.statusText}`;

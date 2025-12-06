@@ -1,7 +1,8 @@
 package com.example.demo.repository;
 
-import com.example.demo.entity.FulltimePayslip; 
-import com.example.demo.entity.PayslipHistoryDTO; // Import DTO từ package entity
+import com.example.demo.dto.PayslipHistoryDTO;
+import com.example.demo.entity.FulltimePayslip;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

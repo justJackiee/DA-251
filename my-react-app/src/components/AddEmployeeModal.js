@@ -772,7 +772,16 @@ export default function AddEmployeeModal({ isOpen, onClose, initialData = null, 
           setLoading(false);
           return;
         }
-        await axios.post(`http://localhost:5000/api/employees/${initialData.id}/contracts`, contractPayload);
+        if (formData.contractFile) {
+          const form = new FormData();
+          form.append('file', formData.contractFile);
+          form.append('payload', JSON.stringify(contractPayload));
+          await axios.post(`http://localhost:5000/api/employees/${initialData.id}/contracts-with-file`, form, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+        } else {
+          await axios.post(`http://localhost:5000/api/employees/${initialData.id}/contracts`, contractPayload);
+        }
       } else {
         const payload = buildPayload(formData);
         // Debug: show payload sent to server when creating employee

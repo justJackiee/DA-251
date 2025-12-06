@@ -388,6 +388,12 @@ INSERT INTO freelance_actual_bonus (payslip_id, stt, name, amount) VALUES
 INSERT INTO freelance_actual_penalty (payslip_id, stt, name, amount) VALUES
 (1, 1, 'Late Delivery Penalty', 2000000.00);
 
+ALTER TABLE fulltime_contract 
+ADD COLUMN document_path VARCHAR(500);
+
+ALTER TABLE freelance_contract 
+ADD COLUMN document_path VARCHAR(500);
+
 -- ============================================
 -- VERIFICATION QUERIES
 -- ============================================

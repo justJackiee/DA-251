@@ -69,11 +69,12 @@ public class EmployeeController {
         info.put("StartDate", "2025-01-01"); 
         response.put("info", info);
         
-        // Fetch REAL Contracts (Dynamic)
+        // Fetch REAL Contracts (Dynamic) - include both Fulltime and Freelance contracts
         List<Map<String, Object>> contractsList = new ArrayList<>();
 
-        if ("Fulltime".equalsIgnoreCase(emp.getType())) {
-            List<FulltimeContract> fContracts = fulltimeContractRepository.findByEmployeeId(id);
+        // Always include Fulltime contracts (if any)
+        List<FulltimeContract> fContracts = fulltimeContractRepository.findByEmployeeId(id);
+        if (fContracts != null) {
             for (FulltimeContract fc : fContracts) {
                 Map<String, Object> contractMap = new HashMap<>();
                 contractMap.put("FullCon_ID", fc.getContractId());
@@ -81,11 +82,14 @@ public class EmployeeController {
                 contractMap.put("EndDate", fc.getEndDate());
                 contractMap.put("BaseSalary", fc.getBaseSalary());
                 contractMap.put("Type", fc.getType());
-                contractMap.put("Status", "Active"); 
+                contractMap.put("Status", "Active");
                 contractsList.add(contractMap);
             }
-        } else if ("Freelance".equalsIgnoreCase(emp.getType())) {
-            List<FreelanceContract> flContracts = freelanceContractRepository.findByEmployeeId(id);
+        }
+
+        // Also include Freelance contracts (if any)
+        List<FreelanceContract> flContracts = freelanceContractRepository.findByEmployeeId(id);
+        if (flContracts != null) {
             for (FreelanceContract flc : flContracts) {
                 Map<String, Object> contractMap = new HashMap<>();
                 contractMap.put("FullCon_ID", flc.getContractId());
@@ -165,6 +169,9 @@ public class EmployeeController {
             if (updates.containsKey("Position")) {
                 emp.setType(updates.get("Position"));
             }
+            if (updates.containsKey("Status")) {
+                emp.setStatus(updates.get("Status"));
+            }
             
             System.out.println("About to save employee: " + emp); 
 
@@ -177,6 +184,27 @@ public class EmployeeController {
             errorResponse.put("success", false);
             errorResponse.put("message", "Error: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+    
+    // Dedicated endpoint to update only the status field to avoid touching enum-mapped columns
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateEmployeeStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            String newStatus = null;
+            if (body.containsKey("status")) newStatus = body.get("status");
+            if (newStatus == null && body.containsKey("Status")) newStatus = body.get("Status");
+            if (newStatus == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "status is required"));
+            }
+            // Ensure employee exists
+            if (!employeeRepository.existsById(id)) return ResponseEntity.notFound().build();
+            // Use native repository update that casts the string to the DB enum type
+            employeeRepository.updateStatusByIdNative(id, newStatus);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Status updated"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
         }
     }
     @PostMapping
@@ -196,9 +224,20 @@ public class EmployeeController {
             emp.setPassword(request.getPassword()); 
             emp.setBankAccountNumber(request.getBankAccountNumber());
 
+            // Validate contract payload before persisting contracts to avoid DB constraint errors
             Employee savedEmp = employeeRepository.save(emp);
 
             if ("Fulltime".equalsIgnoreCase(request.getType())) {
+                if (request.getContract() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "contract is required for Fulltime employee"));
+                }
+                if (request.getContract().getStartDate() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "startDate is required for Fulltime contract"));
+                }
+                if (request.getContract().getBaseSalary() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "baseSalary is required for Fulltime contract"));
+                }
+
                 FulltimeContract contract = new FulltimeContract();
                 contract.setEmployeeId(savedEmp.getId());
                 contract.setStartDate(request.getContract().getStartDate());
@@ -210,6 +249,19 @@ public class EmployeeController {
                 fulltimeContractRepository.save(contract);
 
             } else if ("Freelance".equalsIgnoreCase(request.getType())) {
+                if (request.getContract() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "contract is required for Freelance employee"));
+                }
+                if (request.getContract().getStartDate() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "startDate is required for Freelance contract"));
+                }
+                if (request.getContract().getEndDate() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "endDate is required for Freelance contract"));
+                }
+                if (request.getContract().getContractValue() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "contractValue is required for Freelance contract"));
+                }
+
                 FreelanceContract contract = new FreelanceContract();
                 contract.setEmployeeId(savedEmp.getId());
                 contract.setStartDate(request.getContract().getStartDate());
@@ -230,34 +282,183 @@ public class EmployeeController {
     @PostMapping("/{id}/contracts")
     public ResponseEntity<?> addContractToEmployee(@PathVariable Long id, @RequestBody Map<String, Object> contract) {
         try {
+            System.out.println("Received contract payload for employee " + id + ": " + contract);
             Employee emp = employeeRepository.findById(id).orElse(null);
             if (emp == null) return ResponseEntity.notFound().build();
 
-            if ("Fulltime".equalsIgnoreCase(emp.getType())) {
+            // Heuristic detection for contract kind based on payload fields
+            boolean payloadLooksLikeFulltime = false;
+            boolean payloadLooksLikeFreelance = false;
+            if (contract.get("baseSalary") != null || contract.get("otRate") != null || contract.get("annualLeaveDays") != null || contract.get("contractType") != null) {
+                payloadLooksLikeFulltime = true;
+            }
+            if (contract.get("contractValue") != null || contract.get("committedDeadline") != null) {
+                payloadLooksLikeFreelance = true;
+            }
+
+            // If employee is currently Freelance but incoming contract is Fulltime, convert employee type
+            if (payloadLooksLikeFulltime && !"Fulltime".equalsIgnoreCase(emp.getType())) {
+                // Use native update to change only the `type` column and avoid writing other enum-mapped columns
+                employeeRepository.updateTypeByIdNative(id, "Fulltime");
+                System.out.println("Converted employee " + id + " type to Fulltime due to incoming contract.");
+                // Also update the in-memory entity so subsequent logic treats this employee as Fulltime
+                emp.setType("Fulltime");
+            }
+
+            // Choose branch based primarily on payload detection; fallback to employee.type when ambiguous
+            if (payloadLooksLikeFulltime) {
                 FulltimeContract fc = new FulltimeContract();
                 fc.setEmployeeId(id);
-                if (contract.get("startDate") != null) fc.setStartDate(LocalDate.parse((String) contract.get("startDate")));
-                if (contract.get("endDate") != null && contract.get("endDate") instanceof String && !((String)contract.get("endDate")).isBlank()) fc.setEndDate(LocalDate.parse((String) contract.get("endDate")));
-                if (contract.get("baseSalary") != null) fc.setBaseSalary(Double.valueOf(contract.get("baseSalary").toString()));
-                if (contract.get("otRate") != null) fc.setOtRate(Double.valueOf(contract.get("otRate").toString()));
-                if (contract.get("annualLeaveDays") != null) fc.setAnnualLeaveDays(Integer.valueOf(contract.get("annualLeaveDays").toString()));
-                if (contract.get("contractType") != null) fc.setType((String) contract.get("contractType"));
+                // Parse dates/numbers defensively
+                if (contract.get("startDate") != null) {
+                    LocalDate d = parseDateSafe(contract.get("startDate"));
+                    if (d != null) fc.setStartDate(d);
+                }
+                if (contract.get("endDate") != null) {
+                    LocalDate d = parseDateSafe(contract.get("endDate"));
+                    if (d != null) fc.setEndDate(d);
+                }
+                Double baseSalary = parseDoubleSafe(contract.get("baseSalary"));
+                if (baseSalary != null) fc.setBaseSalary(baseSalary);
+                // Validate required fields for Fulltime
+                if (fc.getStartDate() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "startDate is required for Fulltime contract"));
+                }
+                if (fc.getBaseSalary() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "baseSalary is required for Fulltime contract"));
+                }
+                Double ot = parseDoubleSafe(contract.get("otRate"));
+                if (ot != null) fc.setOtRate(ot);
+                Integer al = parseIntegerSafe(contract.get("annualLeaveDays"));
+                if (al != null) fc.setAnnualLeaveDays(al);
+                if (contract.get("contractType") != null) fc.setType(String.valueOf(contract.get("contractType")));
                 fulltimeContractRepository.save(fc);
-
-            } else {
+            } else if (payloadLooksLikeFreelance) {
                 FreelanceContract fl = new FreelanceContract();
                 fl.setEmployeeId(id);
-                if (contract.get("startDate") != null) fl.setStartDate(LocalDate.parse((String) contract.get("startDate")));
-                if (contract.get("endDate") != null && contract.get("endDate") instanceof String && !((String)contract.get("endDate")).isBlank()) fl.setEndDate(LocalDate.parse((String) contract.get("endDate")));
-                if (contract.get("contractValue") != null) fl.setValue(Double.valueOf(contract.get("contractValue").toString()));
-                if (contract.get("committedDeadline") != null && contract.get("committedDeadline") instanceof String && !((String)contract.get("committedDeadline")).isBlank()) fl.setCommittedDeadline(LocalDate.parse((String) contract.get("committedDeadline")));
+                if (contract.get("startDate") != null) {
+                    LocalDate d = parseDateSafe(contract.get("startDate"));
+                    if (d != null) fl.setStartDate(d);
+                }
+                if (contract.get("endDate") != null) {
+                    LocalDate d = parseDateSafe(contract.get("endDate"));
+                    if (d != null) fl.setEndDate(d);
+                }
+                Double val = parseDoubleSafe(contract.get("contractValue"));
+                if (val != null) fl.setValue(val);
+                // Validate required fields for Freelance
+                if (fl.getStartDate() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "startDate is required for Freelance contract"));
+                }
+                if (fl.getEndDate() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "endDate is required for Freelance contract"));
+                }
+                if (fl.getValue() == null) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "contractValue is required for Freelance contract"));
+                }
+                if (contract.get("committedDeadline") != null) {
+                    LocalDate d = parseDateSafe(contract.get("committedDeadline"));
+                    if (d != null) fl.setCommittedDeadline(d);
+                }
                 freelanceContractRepository.save(fl);
+            } else {
+                // Fallback: if payload is ambiguous, use employee.type to decide
+                if ("Fulltime".equalsIgnoreCase(emp.getType())) {
+                    FulltimeContract fc = new FulltimeContract();
+                    fc.setEmployeeId(id);
+                    if (contract.get("startDate") != null) {
+                        LocalDate d = parseDateSafe(contract.get("startDate"));
+                        if (d != null) fc.setStartDate(d);
+                    }
+                    if (contract.get("endDate") != null) {
+                        LocalDate d = parseDateSafe(contract.get("endDate"));
+                        if (d != null) fc.setEndDate(d);
+                    }
+                    Double baseSalary = parseDoubleSafe(contract.get("baseSalary"));
+                    if (baseSalary != null) fc.setBaseSalary(baseSalary);
+                    if (fc.getStartDate() == null) {
+                        return ResponseEntity.badRequest().body(Map.of("success", false, "message", "startDate is required for Fulltime contract"));
+                    }
+                    if (fc.getBaseSalary() == null) {
+                        return ResponseEntity.badRequest().body(Map.of("success", false, "message", "baseSalary is required for Fulltime contract"));
+                    }
+                    Double ot = parseDoubleSafe(contract.get("otRate"));
+                    if (ot != null) fc.setOtRate(ot);
+                    Integer al = parseIntegerSafe(contract.get("annualLeaveDays"));
+                    if (al != null) fc.setAnnualLeaveDays(al);
+                    if (contract.get("contractType") != null) fc.setType(String.valueOf(contract.get("contractType")));
+                    fulltimeContractRepository.save(fc);
+                } else {
+                    FreelanceContract fl = new FreelanceContract();
+                    fl.setEmployeeId(id);
+                    if (contract.get("startDate") != null) {
+                        LocalDate d = parseDateSafe(contract.get("startDate"));
+                        if (d != null) fl.setStartDate(d);
+                    }
+                    if (contract.get("endDate") != null) {
+                        LocalDate d = parseDateSafe(contract.get("endDate"));
+                        if (d != null) fl.setEndDate(d);
+                    }
+                    Double val = parseDoubleSafe(contract.get("contractValue"));
+                    if (val != null) fl.setValue(val);
+                    if (fl.getStartDate() == null) {
+                        return ResponseEntity.badRequest().body(Map.of("success", false, "message", "startDate is required for Freelance contract"));
+                    }
+                    if (fl.getEndDate() == null) {
+                        return ResponseEntity.badRequest().body(Map.of("success", false, "message", "endDate is required for Freelance contract"));
+                    }
+                    if (fl.getValue() == null) {
+                        return ResponseEntity.badRequest().body(Map.of("success", false, "message", "contractValue is required for Freelance contract"));
+                    }
+                    if (contract.get("committedDeadline") != null) {
+                        LocalDate d = parseDateSafe(contract.get("committedDeadline"));
+                        if (d != null) fl.setCommittedDeadline(d);
+                    }
+                    freelanceContractRepository.save(fl);
+                }
             }
 
             return ResponseEntity.ok(Map.of("success", true, "message", "Contract added."));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    // Helper parsing utilities
+    private LocalDate parseDateSafe(Object o) {
+        try {
+            if (o == null) return null;
+            String s = String.valueOf(o).trim();
+            if (s.isBlank()) return null;
+            return LocalDate.parse(s);
+        } catch (Exception ex) {
+            System.out.println("Failed to parse date: " + o + " -> " + ex.getMessage());
+            return null;
+        }
+    }
+
+    private Double parseDoubleSafe(Object o) {
+        try {
+            if (o == null) return null;
+            String s = String.valueOf(o).trim();
+            if (s.isBlank()) return null;
+            return Double.valueOf(s);
+        } catch (Exception ex) {
+            System.out.println("Failed to parse double: " + o + " -> " + ex.getMessage());
+            return null;
+        }
+    }
+
+    private Integer parseIntegerSafe(Object o) {
+        try {
+            if (o == null) return null;
+            String s = String.valueOf(o).trim();
+            if (s.isBlank()) return null;
+            return Integer.valueOf(s);
+        } catch (Exception ex) {
+            System.out.println("Failed to parse int: " + o + " -> " + ex.getMessage());
+            return null;
         }
     }
     // --- API: LẤY LỊCH SỬ LƯƠNG ---

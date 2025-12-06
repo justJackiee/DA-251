@@ -19,14 +19,15 @@ CREATE TABLE employee_account (
     f_name VARCHAR(50) NOT NULL,
     m_name VARCHAR(50),
     l_name VARCHAR(50) NOT NULL,
-    sex gender_enum,
+    -- Use text for these columns so application (JPA entity) that expects text binds correctly
+    sex text,
     phone VARCHAR(20),
     email VARCHAR(100) UNIQUE NOT NULL,
     bank_account_number VARCHAR(50),
     address TEXT,
     dob DATE,
-    type emp_type_enum NOT NULL, -- Phân loại Fulltime/Freelance
-    status emp_status_enum DEFAULT 'Active',
+    type text NOT NULL, -- Phân loại Fulltime/Freelance
+    status text DEFAULT 'Active',
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL 
 );
@@ -46,7 +47,7 @@ CREATE TABLE fulltime_contract (
     base_salary DECIMAL(15, 2) NOT NULL,
     ot_rate DECIMAL(5, 2) DEFAULT 1.5,
     annual_leave_days INT DEFAULT 12,
-    type contract_type_enum NOT NULL -- Definite/Indefinite
+    type text NOT NULL -- Definite/Indefinite (stored as text to match application mapping)
 );
 
 -- Các bảng chi tiết của Fulltime Contract (Phụ cấp, Thưởng quy định, Khấu trừ, Ngày làm việc)

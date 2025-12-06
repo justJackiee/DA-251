@@ -17,6 +17,13 @@ const PAYMENT_METHODS = {
   CASH: 'Cash'
 };
 
+// Map UI gender labels to DB enum labels (adjust values if your DB expects different labels)
+const GENDER_MAP = {
+  Male: 'MALE',
+  Female: 'FEMALE',
+  Other: 'OTHER'
+};
+
 const STEPS = [
   { number: 1, label: 'Profile detail' },
   { number: 2, label: 'Account' },
@@ -25,6 +32,7 @@ const STEPS = [
 
 const INITIAL_FORM_STATE = {
   employeeType: EMPLOYEE_TYPES.FULLTIME,
+  contractKind: EMPLOYEE_TYPES.FULLTIME,
   fullName: '',
   dob: '',
   sex: 'Male',
@@ -85,11 +93,13 @@ const validateContractStep = (data) => {
 
   if (!commonValid || !bankValid) return false;
 
-  if (data.employeeType === EMPLOYEE_TYPES.FULLTIME) {
+  const kind = data.contractKind || data.employeeType;
+
+  if (kind === EMPLOYEE_TYPES.FULLTIME) {
     return validateFulltimeContract(data);
   }
   
-  if (data.employeeType === EMPLOYEE_TYPES.FREELANCE) {
+  if (kind === EMPLOYEE_TYPES.FREELANCE) {
     return validateFreelanceContract(data);
   }
   
@@ -123,7 +133,8 @@ const buildPayload = (formData) => {
   return {
     fName,
     lName,
-    sex: formData.sex,
+    // Normalize sex to the DB enum label (fallback to original value)
+    sex: GENDER_MAP[formData.sex] || formData.sex,
     phone: formData.phone,
     email: formData.email,
     address: formData.address,
@@ -138,8 +149,22 @@ const buildPayload = (formData) => {
 };
 
 const buildContractPayload = (formData) => {
-  if (formData.employeeType === EMPLOYEE_TYPES.FULLTIME) {
+  // Determine contract kind: prefer explicit selector; fall back to employeeType.
+  // Only apply heuristics when neither is provided (avoid overriding user's chosen employee type).
+  let kind = formData.contractKind || formData.employeeType;
+
+  // Heuristic detection used only as a last resort when neither contractKind nor employeeType is set
+  const looksFulltime = Boolean(formData.baseSalary || formData.otRate || formData.annualLeaveDays);
+  const looksFreelance = Boolean(formData.contractValue || formData.committedDeadline);
+
+  if (!formData.contractKind && !formData.employeeType) {
+    if (looksFulltime) kind = EMPLOYEE_TYPES.FULLTIME;
+    else if (looksFreelance) kind = EMPLOYEE_TYPES.FREELANCE;
+  }
+
+  if (kind === EMPLOYEE_TYPES.FULLTIME) {
     return {
+      contractKind: 'Fulltime',
       startDate: formData.startDate,
       endDate: formData.contractType === CONTRACT_TYPES.INDEFINITE ? null : formData.endDate,
       contractType: formData.contractType,
@@ -151,8 +176,9 @@ const buildContractPayload = (formData) => {
       deductions: formData.deductions
     };
   }
-  
+
   return {
+    contractKind: 'Freelance',
     startDate: formData.startDate,
     endDate: formData.endDate,
     contractValue: formData.contractValue,
@@ -382,15 +408,32 @@ const AccountStep = ({ formData, onChange }) => (
 );
 
 const ContractStep = ({ formData, onChange, onListChange, onAddItem, onRemoveItem, fileInputRef, onFileSelect }) => {
-  const isFulltime = formData.employeeType === EMPLOYEE_TYPES.FULLTIME;
+  const kind = formData.contractKind || formData.employeeType;
+  const isFulltime = kind === EMPLOYEE_TYPES.FULLTIME;
+  // end date is required for Freelance, and for Fulltime only when contractType is not Indefinite
+  const endDateRequired = isFulltime ? formData.contractType !== CONTRACT_TYPES.INDEFINITE : true;
 
   return (
     <div className="space-y-6">
       {/* General Contract Info */}
       <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          ℹ {formData.employeeType} Contract Details
-        </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold flex items-center gap-2">
+                ℹ {kind} Contract Details
+              </h3>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Contract Kind:</span>
+              {[EMPLOYEE_TYPES.FULLTIME, EMPLOYEE_TYPES.FREELANCE].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => onChange('contractKind', t)}
+                  className={`px-2 py-1 rounded text-sm ${kind === t ? 'bg-orange-500 text-white' : 'bg-white border'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">
@@ -405,16 +448,16 @@ const ContractStep = ({ formData, onChange, onListChange, onAddItem, onRemoveIte
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">
-              End Date {formData.contractType !== CONTRACT_TYPES.INDEFINITE && <span className="text-red-500">*</span>}
+              End Date {endDateRequired && <span className="text-red-500">*</span>}
             </label>
             <input
               type="date"
               className={`w-full px-3 py-2 border rounded-md bg-white ${
-                formData.contractType === CONTRACT_TYPES.INDEFINITE ? 'bg-gray-100 cursor-not-allowed' : ''
+                isFulltime && formData.contractType === CONTRACT_TYPES.INDEFINITE ? 'bg-gray-100 cursor-not-allowed' : ''
               }`}
               value={formData.endDate}
               onChange={(e) => onChange('endDate', e.target.value)}
-              disabled={formData.contractType === CONTRACT_TYPES.INDEFINITE}
+              disabled={isFulltime && formData.contractType === CONTRACT_TYPES.INDEFINITE}
             />
           </div>
 
@@ -718,9 +761,23 @@ export default function AddEmployeeModal({ isOpen, onClose, initialData = null, 
         }
 
         const contractPayload = buildContractPayload(formData);
+        // Debug: log payload and current form state to help trace validation issues
+        // (server reported Freelance endDate missing — this will show what we actually send)
+        // eslint-disable-next-line no-console
+        console.debug('Submitting contract payload', { contractPayload, formData });
+
+        // Client-side guard: prevent sending a Freelance contract without endDate
+        if (contractPayload.contractKind === EMPLOYEE_TYPES.FREELANCE && !contractPayload.endDate) {
+          alert('End date is required for Freelance contract');
+          setLoading(false);
+          return;
+        }
         await axios.post(`http://localhost:5000/api/employees/${initialData.id}/contracts`, contractPayload);
       } else {
         const payload = buildPayload(formData);
+        // Debug: show payload sent to server when creating employee
+        // eslint-disable-next-line no-console
+        console.debug('Creating employee payload', payload);
         await axios.post('http://localhost:5000/api/employees', payload);
       }
       // close via controlled prop if available
@@ -753,6 +810,9 @@ export default function AddEmployeeModal({ isOpen, onClose, initialData = null, 
         phone: initialData.phone || prev.phone,
         address: initialData.location || initialData.address || prev.address,
         sex: initialData.sex || prev.sex
+      ,
+        // If opening to add contract for an existing employee, default contractKind to their current type
+        contractKind: initialData.type || prev.contractKind
       }));
       setCurrentStep(startStep || 3);
     } else {

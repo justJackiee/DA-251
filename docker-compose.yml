@@ -12,7 +12,8 @@ services:
     depends_on:
       - postgres
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
+      # Connect the server to the HRM database created by the init script
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/HRM
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
 

@@ -27,4 +27,7 @@ public class FreelanceContract {
 
     @Column(name = "committed_deadline")
     private LocalDate committedDeadline;
+
+    @Column(name = "document_path")
+    private String documentPath;
 }

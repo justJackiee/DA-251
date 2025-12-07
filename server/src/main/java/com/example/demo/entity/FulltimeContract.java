@@ -33,4 +33,7 @@ public class FulltimeContract {
 
     @Column(name = "type", columnDefinition = "text")
     private String type; 
+
+    @Column(name = "document_path")
+    private String documentPath;
 }

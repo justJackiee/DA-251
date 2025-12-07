@@ -8,8 +8,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+    // MỚI: Lấy danh sách nhân viên Fulltime đang Active để tính lương
+    @Query(value = "SELECT * FROM employee_account WHERE type = 'Fulltime' AND status = 'Active'", nativeQuery = true)
+    List<Employee> findAllActiveFulltime();
 
 	@Modifying
 	@Transactional

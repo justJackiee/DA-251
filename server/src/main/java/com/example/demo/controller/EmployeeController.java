@@ -6,11 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.demo.dto.EmployeeCreationRequest;
+import com.example.demo.dto.PayslipHistoryDTO;
 import com.example.demo.entity.FulltimeContract;
 import com.example.demo.entity.FreelanceContract;
 import com.example.demo.repository.FulltimeContractRepository;
 import com.example.demo.repository.FreelanceContractRepository;
-import com.example.demo.entity.PayslipHistoryDTO;
 import com.example.demo.repository.FulltimePayslipRepository;
 import com.example.demo.repository.FreelancePayslipRepository;
 

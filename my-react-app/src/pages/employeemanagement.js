@@ -4,8 +4,6 @@ import CEmployeeTable from "../components/Table/CEmployeeTable";
 // import HeaderTabs from '../components/HeaderTabs';
 import FiltersBar from '../components/FiltersBar';
 
-
-
 function EmployeeManagement() {
   // const [activeTab, setActiveTab] = useState('team');
   const [search, setSearch] = useState('');

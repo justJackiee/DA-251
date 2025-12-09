@@ -1,70 +1,88 @@
 package com.example.demo.repository;
 
-import com.example.demo.dto.PayrollDashboardDTO;
-import com.example.demo.entity.FulltimePayslip;
+import com.example.demo.entity.Payroll;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying; // Import này
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional; // Import này
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface PayrollRepository extends JpaRepository<FulltimePayslip, Long> {
+public interface PayrollRepository extends JpaRepository<Payroll, Integer> { 
+    // Lưu ý: Đổi thành <Payroll, Integer> vì đây là repository quản lý bảng Payroll (bảng cha)
 
+    // =========================================================================
+    // 1. DASHBOARD & REPORTING (Lấy dữ liệu tổng hợp cho bảng lương)
+    // =========================================================================
     @Query(value = """
-        SELECT 
+        SELECT DISTINCT ON (e.id)
             e.id as employeeId,
             CONCAT(e.f_name, ' ', e.l_name) as fullName,
             'Engineering' as department, 
             e.type as role,
-            COALESCE(fp.net_salary, flp.final_amount) as netPay,
+            ROUND(COALESCE(fp.gross_salary, flp.final_amount), -3) as grossPay,
+            ROUND(COALESCE(fp.net_salary, flp.final_amount), -3) as netPay,
             p.status as status,
             CAST(p.created_at AS DATE) as paymentDate,
             COALESCE(fp.payslip_id, flp.payslip_id) as payslipId,
-            CASE WHEN fp.payslip_id IS NOT NULL THEN 'FULLTIME' ELSE 'FREELANCE' END as contractType
+            CASE WHEN fp.payslip_id IS NOT NULL THEN 'FULLTIME' ELSE 'FREELANCE' END as contractType,
+            p.id as payrollId
         FROM payroll p
         LEFT JOIN fulltime_payslip fp ON p.id = fp.payroll_id
         LEFT JOIN freelance_payslip flp ON p.id = flp.payroll_id
         JOIN employee_account e ON COALESCE(fp.employee_id, flp.employee_id) = e.id
         WHERE p.month = :month AND p.year = :year
+        ORDER BY e.id, p.created_at DESC -- Ưu tiên lấy bản ghi mới nhất nếu có trùng
     """, nativeQuery = true)
     List<Object[]> findPayrollSummary(@Param("month") int month, @Param("year") int year);
 
-    // --- STORED PROCEDURE ---
+    // =========================================================================
+    // 2. CALCULATION LOGIC (Gọi Stored Procedure)
+    // =========================================================================
     @Modifying
     @Transactional
     @Query(value = "CALL sp_generate_fulltime_payslip(" +
             "CAST(:payrollId AS INTEGER), " +
             "CAST(:empId AS INTEGER), " +
             ":workDays, " +
-            ":otValue, " +
-            ":otherDeduction, " +
-            "CAST(:manualBonus AS jsonb))", // Cast String sang JSONB của Postgres
+            ":otHours, " +             
+            "CAST(:manualBonus AS jsonb))", 
             nativeQuery = true)
     void generateFulltimePayslip(
-            @Param("payrollId") Long payrollId,
-            @Param("empId") Long empId,
+            @Param("payrollId") Integer payrollId, // Dùng Integer khớp với SERIAL trong DB
+            @Param("empId") Integer empId,
             @Param("workDays") Integer workDays,
-            @Param("otValue") BigDecimal otValue,
-            @Param("otherDeduction") BigDecimal otherDeduction,
-            @Param("manualBonus") String manualBonus // Truyền JSON dạng String, vd: "{}"
+            @Param("otHours") BigDecimal otHours, // Dùng BigDecimal để đảm bảo độ chính xác
+            @Param("manualBonus") String manualBonus
     );
 
-    // Trả về ID của kỳ lương nếu có
+    // =========================================================================
+    // 3. PAYROLL PERIOD MANAGEMENT (Quản lý kỳ lương)
+    // =========================================================================
+    
+    // Tìm ID kỳ lương theo tháng/năm (Để check xem đã tạo chưa)
     @Query(value = "SELECT id FROM payroll WHERE month = :month AND year = :year LIMIT 1", nativeQuery = true)
-    Long findPayrollIdByMonthYear(@Param("month") int month, @Param("year") int year);
+    Optional<Integer> findPayrollIdByMonthYear(@Param("month") int month, @Param("year") int year);
 
-    // 4. MỚI: Tạo bảng Payroll cha (nếu chưa có)
+    // Tạo kỳ lương mới (Nếu không muốn dùng save() của JPA)
     @Modifying
     @Transactional
     @Query(value = "INSERT INTO payroll (month, year, period_start, period_end, status) " +
                    "VALUES (:month, :year, :start, :end, 'Unpaid')", nativeQuery = true)
     void createPayrollPeriod(@Param("month") int month, 
                              @Param("year") int year, 
-                             @Param("start") java.time.LocalDate start, 
-                             @Param("end") java.time.LocalDate end);
+                             @Param("start") LocalDate start, 
+                             @Param("end") LocalDate end);
+
+    // Cập nhật trạng thái (Ví dụ: Chốt lương -> Paid)
+    @Modifying
+    @Transactional
+    @Query("UPDATE Payroll p SET p.status = :status WHERE p.id = :id")
+    void updateStatus(@Param("id") Integer id, @Param("status") String status);
 }

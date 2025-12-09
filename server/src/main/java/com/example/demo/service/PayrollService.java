@@ -4,83 +4,79 @@ import com.example.demo.dto.PayrollDashboardDTO;
 import com.example.demo.dto.PayslipDetailDTO;
 import com.example.demo.entity.*;
 import com.example.demo.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor // Tự động inject dependency (thay cho @Autowired thủ công)
 public class PayrollService {
 
-    @Autowired
-    private PayrollRepository payrollRepo; // Repo chứa query Native Dashboard
-
-    @Autowired
-    private FulltimePayslipRepository fulltimeRepo;
-
-    @Autowired
-    private FreelancePayslipRepository freelanceRepo;
-
-    @Autowired
-    private EmployeeRepository employeeRepo; // Để lấy tên nhân viên khi xem chi tiết
-
-    @Autowired private TimesheetRepository timesheetRepo;
+    private final PayrollRepository payrollRepo;
+    private final FulltimePayslipViewRepository fulltimeViewRepo; // Repo mới cho View
+    private final FreelancePayslipRepository freelanceRepo;
+    private final EmployeeRepository employeeRepo;
+    private final TimesheetRepository timesheetRepo;
+    private final ObjectMapper objectMapper; // Jackson lib để xử lý JSON
 
     // ==========================================
-    // PHẦN 0: TÍNH TOÁN LƯƠNG
+    // PHẦN 1: TÍNH TOÁN LƯƠNG (BATCH JOB)
     // ==========================================
     private static final double STANDARD_HOURS_PER_DAY = 8.0;
 
     @Transactional
     public void calculateMonthlyPayroll(int month, int year) {
-        // B1: Kiểm tra hoặc tạo bảng lương cha (Payroll Period)
-        Long payrollId = payrollRepo.findPayrollIdByMonthYear(month, year);
+        // B1: Kiểm tra hoặc tạo bảng lương cha
+        Integer payrollId = payrollRepo.findPayrollIdByMonthYear(month, year).orElse(null);
 
         if (payrollId == null) {
             LocalDate start = LocalDate.of(year, month, 1);
             LocalDate end = YearMonth.of(year, month).atEndOfMonth();
             payrollRepo.createPayrollPeriod(month, year, start, end);
-            payrollId = payrollRepo.findPayrollIdByMonthYear(month, year);
+            payrollId = payrollRepo.findPayrollIdByMonthYear(month, year)
+                    .orElseThrow(() -> new RuntimeException("Error creating payroll period"));
         }
 
-        // B2: Lấy danh sách nhân viên Fulltime đang Active
+        // B2: Lấy danh sách nhân viên Fulltime Active
         List<Employee> fulltimeEmployees = employeeRepo.findAllActiveFulltime();
 
         // B3: Vòng lặp tính lương
         for (Employee emp : fulltimeEmployees) {
-            // a. Lấy tổng số giờ làm việc thực tế từ Timesheet (Trả về Double)
+            // a. Lấy tổng số giờ làm từ Timesheet
             Double totalHours = timesheetRepo.calculateTotalWorkedHours(emp.getId(), month, year);
             if (totalHours == null) totalHours = 0.0;
 
-            // b. QUY ĐỔI & LÀM TRÒN XUỐNG
-            // Ví dụ: Làm 207 tiếng. 207 / 8 = 25.875 -> Ép kiểu (int) sẽ tự động cắt bỏ phần thập phân -> 25 ngày.
+            // b. Quy đổi ra ngày công & OT
             int actualWorkDays = (int) (totalHours / STANDARD_HOURS_PER_DAY);
+            
+            // Hiện tại set cứng OT = 0, sau này lấy từ Timesheet nếu có tách cột OT
+            BigDecimal otHours = BigDecimal.ZERO; 
 
-            // c. Chuẩn bị tham số khác
-            BigDecimal otValue = BigDecimal.ZERO; 
-            BigDecimal otherDeduction = BigDecimal.ZERO;
+            // c. Bonus mặc định là rỗng (Batch job chạy tự động chưa có input bonus tay)
             String manualBonusJson = "{}";
 
-            // d. Gọi Repo (Lưu ý: Repo phải nhận tham số workDays là Integer)
+            // d. Gọi Repo (Lưu ý ép kiểu Long -> Integer cho khớp với Repo mới)
             payrollRepo.generateFulltimePayslip(
                 payrollId,
-                emp.getId(),
-                actualWorkDays, // Truyền số nguyên vào đây
-                otValue,
-                otherDeduction,
+                emp.getId().intValue(), // Cast Long to Integer
+                actualWorkDays,
+                otHours,
                 manualBonusJson
             );
         }
     }
     
-    // --- 1. LOGIC DASHBOARD ---
+    // ==========================================
+    // PHẦN 2: DASHBOARD
+    // ==========================================
     public List<PayrollDashboardDTO> getPayrollDashboard(int month, int year) {
         List<Object[]> rawData = payrollRepo.findPayrollSummary(month, year);
         
@@ -90,67 +86,65 @@ public class PayrollService {
             (String) row[2],               // department
             (String) row[3],               // role
             (BigDecimal) row[4],           // netPay
-            (String) row[5],               // status
-            (Date) row[6],                 // paymentDate (Lưu ý: Driver Postgres trả về java.sql.Date là con của java.util.Date nên cast OK)
-            row[7] != null ? ((Number) row[7]).longValue() : null, // payslipId
-            (String) row[8]                // contractType
+            (BigDecimal) row[5],           // netPay
+            (String) row[6],               // status
+            (Date) row[7],                 // paymentDate
+            row[8] != null ? ((Number) row[8]).longValue() : null, // payslipId
+            (String) row[9],               // contractType
+            
+            // [MỚI] Map cột thứ 9 (payrollId) vào DTO
+            ((Number) row[10]).longValue()  
         )).collect(Collectors.toList());
     }
 
-    // --- 2. LOGIC CHI TIẾT FULLTIME ---
-    public PayslipDetailDTO getFulltimeDetail(Long payslipId) {
-        // Lấy Payslip từ DB
-        FulltimePayslip payslip = fulltimeRepo.findById(payslipId)
-                .orElseThrow(() -> new RuntimeException("Payslip not found with id: " + payslipId));
+    // ==========================================
+    // PHẦN 3: CHI TIẾT LƯƠNG FULLTIME (Dùng VIEW)
+    // ==========================================
+    public PayslipDetailDTO getFulltimeDetail(Long payrollId, Long employeeId) {
+        // Sử dụng Repo của View thay vì Entity thường -> Hiệu năng cao & code gọn
+        FulltimePayslipView view = fulltimeViewRepo.findByPayrollIdAndEmployeeId(payrollId, employeeId)
+                .orElseThrow(() -> new RuntimeException("Payslip not found"));
 
-        // Lấy thông tin Employee
-        Employee emp = employeeRepo.findById(payslip.getEmployeeId())
-                .orElse(new Employee());
-
+        // Map dữ liệu từ View sang DTO
         PayslipDetailDTO dto = new PayslipDetailDTO();
-        
-        // Map Header
-        dto.setEmployeeName(emp.getFName() + " " + emp.getLName());
-        // Lấy tháng/năm từ bảng Payroll cha (nếu có quan hệ) hoặc hardcode tạm/query thêm
-        // Ở đây tạm thời để chuỗi demo hoặc bạn cần query bảng Payroll theo payslip.getPayrollId()
-        dto.setPeriod("Period Info"); 
+        dto.setPayslipId(view.getPayslipId());
+        dto.setPayrollId(view.getPayrollId());
+        dto.setEmployeeId(view.getEmployeeId());
+        dto.setFullName(view.getFullName());
+        dto.setBankAccountNumber(view.getBankAccountNumber());
+        dto.setGrossSalary(view.getGrossSalary());
+        dto.setNetSalary(view.getNetSalary());
 
-        // Map Body
-        dto.setGrossSalary(payslip.getGrossSalary());
-        dto.setNetSalary(payslip.getNetSalary());
-
-        // Map Lists (Convert từ Entity con sang DTO Item)
-        // 1. Allowances
-        List<PayslipDetailDTO.Item> allowanceItems = new ArrayList<>();
-        if (payslip.getAllowances() != null) {
-            allowanceItems = payslip.getAllowances().stream()
-                .map(a -> new PayslipDetailDTO.Item(a.getName(), a.getAmount()))
-                .collect(Collectors.toList());
+        // Parse JSON String thành List Map bằng Jackson
+        try {
+            dto.setAllowances(parseJsonToList(view.getAllowancesJson()));
+            dto.setBonuses(parseJsonToList(view.getBonusesJson()));
+            dto.setDeductions(parseJsonToList(view.getDeductionsJson()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Nếu lỗi parse thì trả về list rỗng để không chết API
+            dto.setAllowances(new ArrayList<>());
+            dto.setBonuses(new ArrayList<>());
+            dto.setDeductions(new ArrayList<>());
         }
-        dto.setAllowances(allowanceItems);
-
-        // 2. Bonuses
-        List<PayslipDetailDTO.Item> bonusItems = new ArrayList<>();
-        if (payslip.getBonuses() != null) {
-            bonusItems = payslip.getBonuses().stream()
-                .map(b -> new PayslipDetailDTO.Item(b.getName(), b.getAmount()))
-                .collect(Collectors.toList());
-        }
-        dto.setBonuses(bonusItems);
-
-        // 3. Deductions
-        List<PayslipDetailDTO.Item> deductionItems = new ArrayList<>();
-        if (payslip.getDeductions() != null) {
-            deductionItems = payslip.getDeductions().stream()
-                .map(d -> new PayslipDetailDTO.Item(d.getName(), d.getAmount()))
-                .collect(Collectors.toList());
-        }
-        dto.setDeductions(deductionItems);
 
         return dto;
     }
 
-    // --- 3. LOGIC CHI TIẾT FREELANCE ---
+    // Helper method để parse JSON
+    private List<Map<String, Object>> parseJsonToList(String json) {
+        if (json == null || json.isEmpty()) return new ArrayList<>();
+        try {
+            return objectMapper.readValue(json, List.class);
+        } catch (JsonProcessingException e) {
+            System.err.println("Error parsing JSON: " + json);
+            return new ArrayList<>();
+        }
+    }
+
+    // ==========================================
+    // PHẦN 4: CHI TIẾT LƯƠNG FREELANCE (Logic cũ adapt DTO mới)
+    // ==========================================
     public PayslipDetailDTO getFreelanceDetail(Long payslipId) {
         FreelancePayslip payslip = freelanceRepo.findById(payslipId)
                 .orElseThrow(() -> new RuntimeException("Freelance Payslip not found"));
@@ -160,32 +154,52 @@ public class PayrollService {
 
         PayslipDetailDTO dto = new PayslipDetailDTO();
         
-        dto.setEmployeeName(emp.getFName() + " " + emp.getLName());
-        dto.setPeriod("Project Based");
-        dto.setGrossSalary(payslip.getFinalAmount()); // Freelance coi Gross = Net = Final
-        dto.setNetSalary(payslip.getFinalAmount());
+        dto.setPayslipId(payslip.getPayslipId());
+        dto.setEmployeeId(emp.getId());
+        dto.setFullName(emp.getFName() + " " + emp.getLName());
+        dto.setBankAccountNumber(emp.getBankAccountNumber());
+        dto.setGrossSalary(payslip.getFinalAmount());
+        dto.setNetSalary(payslip.getFinalAmount()); // Freelance thường gross = net nếu chưa tính thuế ở đây
 
-        // Freelance không có Allowance
-        dto.setAllowances(new ArrayList<>());
+        // Map thủ công các list cũ sang List<Map<String, Object>>
+        dto.setAllowances(new ArrayList<>()); // Freelance không có allowances
 
-        // Bonuses
-        List<PayslipDetailDTO.Item> bonusItems = new ArrayList<>();
+        // Map Bonuses
+        List<Map<String, Object>> bonusList = new ArrayList<>();
         if (payslip.getBonuses() != null) {
-            bonusItems = payslip.getBonuses().stream()
-                .map(b -> new PayslipDetailDTO.Item(b.getName(), b.getAmount()))
-                .collect(Collectors.toList());
+            for (var b : payslip.getBonuses()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", b.getName());
+                item.put("amount", b.getAmount());
+                bonusList.add(item);
+            }
         }
-        dto.setBonuses(bonusItems);
+        dto.setBonuses(bonusList);
 
-        // Deductions (Map Penalty của Freelance vào mục Deductions của DTO để hiển thị)
-        List<PayslipDetailDTO.Item> deductionItems = new ArrayList<>();
+        // Map Deductions (Penalties)
+        List<Map<String, Object>> deductionList = new ArrayList<>();
         if (payslip.getPenalties() != null) {
-            deductionItems = payslip.getPenalties().stream()
-                .map(p -> new PayslipDetailDTO.Item(p.getName(), p.getAmount()))
-                .collect(Collectors.toList());
+            for (var p : payslip.getPenalties()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", p.getName());
+                item.put("amount", p.getAmount());
+                deductionList.add(item);
+            }
         }
-        dto.setDeductions(deductionItems);
+        dto.setDeductions(deductionList);
 
         return dto;
+    }
+
+    // ==========================================
+    // PHẦN 5: LOCK PHIẾU LƯƠNG
+    // ==========================================
+    public void lockPayroll(Integer payrollId) {
+        // Kiểm tra xem kỳ lương có tồn tại không
+        if (!payrollRepo.existsById(payrollId)) {
+            throw new RuntimeException("Payroll ID " + payrollId + " not found.");
+        }
+        // Cập nhật trạng thái
+        payrollRepo.updateStatus(payrollId, "Paid");
     }
 }

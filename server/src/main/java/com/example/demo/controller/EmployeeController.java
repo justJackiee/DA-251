@@ -83,9 +83,7 @@ public class EmployeeController {
         info.put("Email", emp.getEmail());
         info.put("Phone", emp.getPhone());
         info.put("Address", emp.getAddress());
-        info.put("City", "HCMC"); 
-        info.put("Department", "Engineering"); 
-        info.put("StartDate", "2025-01-01"); 
+        info.put("Sex", emp.getSex());
         response.put("info", info);
         
         // Fetch REAL Contracts (Dynamic) - include both Fulltime and Freelance contracts

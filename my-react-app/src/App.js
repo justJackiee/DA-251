@@ -21,6 +21,7 @@ import {
     BrowserRouter as Router,
     Routes,
     Route,
+  Navigate,
 } from "react-router-dom";
 import { ThemeProvider } from "@material-tailwind/react";
 
@@ -55,11 +56,11 @@ function App() {
                 <Route path="/timetracking" element={<TimeTracking />} />
                 <Route path="/payroll" element={<PayrollPage />} />
                 <Route path="/" element={
-                  <header className="App-header">
-                    <img src={logo} className="App-logo" alt="logo" />
-                    <h1>Welcome to HR Management System</h1>
-                    <p>Click on Dashboard in the navigation to get started!</p>
-                  </header>
+                  Boolean(localStorage.getItem('isAuthenticated')) ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
                 } />
               </Routes>
             </div>

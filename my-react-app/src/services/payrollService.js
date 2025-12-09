@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// [NOTE] Đã cập nhật port thành 9000 theo yêu cầu
-const API_URL = 'http://localhost:9000/api/payroll';
+const API_URL = 'http://localhost:5000/api/payroll';
 
 export const PayrollService = {
     // 1. Lấy danh sách Dashboard

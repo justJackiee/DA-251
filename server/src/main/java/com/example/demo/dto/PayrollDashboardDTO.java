@@ -14,11 +14,9 @@ public class PayrollDashboardDTO {
     private String fullName;
     private String department; // Hardcode "Engineering" hoặc lấy từ DB
     private String role;       // Fulltime/Freelance
-    private BigDecimal grossPay;
     private BigDecimal netPay;
     private String status;
     private Date paymentDate;
     private Long payslipId;    // ID để gọi API chi tiết
     private String contractType; // "FULLTIME" or "FREELANCE"
-    private Long payrollId;
 }

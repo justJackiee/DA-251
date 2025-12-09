@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import com.example.demo.entity.Timesheet;
+import java.time.LocalDate;
+import java.util.List;
 
 @Repository
 public interface TimesheetRepository extends JpaRepository<Employee, Long> {
@@ -25,4 +28,5 @@ public interface TimesheetRepository extends JpaRepository<Employee, Long> {
     Double calculateTotalWorkedHours(@Param("empId") Long empId, 
                                      @Param("month") int month, 
                                      @Param("year") int year);
+    List<Timesheet> findByDateBetween(LocalDate start, LocalDate end);
 }

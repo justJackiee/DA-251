@@ -62,18 +62,3 @@ services:
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
-
-  server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    container_name: my_server
-    ports:
-      - "5000:5000"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 123456

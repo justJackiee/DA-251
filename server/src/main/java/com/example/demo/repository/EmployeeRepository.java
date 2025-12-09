@@ -33,4 +33,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 	@Transactional
 	@Query(value = "UPDATE employee_account SET type = CAST(:type AS emp_type_enum) WHERE id = :id", nativeQuery = true)
 	void updateTypeByIdNative(@Param("id") Long id, @Param("type") String type);
+    Employee findByUsername(String username);
+
 }

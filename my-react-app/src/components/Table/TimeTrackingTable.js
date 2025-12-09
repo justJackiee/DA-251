@@ -1,39 +1,41 @@
 import React from "react";
-import StatusBadge from "./StatusBadge";
+import dayjs from "dayjs";
 
-const employees = [
-  { name: "Ryan Walker", type: "Full time", total: "100h | 128h", overtime: "0h", status: "Approved" },
-  { name: "Andrew Walker", type: "Full time", total: "120h | 128h", overtime: "0h", status: "Approved" },
-  { name: "Brian Taylor", type: "Full time", total: "128h | 128h", overtime: "0h", status: "Approved" },
-  { name: "Sarah Lee", type: "Contractor", total: "100h | 80h", overtime: "20h", status: "Pending" },
-  { name: "Jennifer Scott", type: "Part time", total: "100h | 90h", overtime: "10h", status: "Pending" },
-];
-
-export default function TimeTrackingTable() {
+export default function TimeTrackingTable({ rows, days }) {
   return (
-    <div className="bg-white rounded-xl shadow p-4">
-      <table className="w-full text-left border-collapse">
-        <thead className="bg-gray-100 text-gray-600 text-sm uppercase">
-          <tr>
-            <th className="p-3">Employee Name</th>
-            <th className="p-3">Employee Type</th>
-            <th className="p-3">Total Work Hours</th>
-            <th className="p-3">Overtime</th>
-            <th className="p-3">Status</th>
-            <th className="p-3">Action</th>
+    <div className="bg-white rounded-lg shadow-sm border overflow-scroll">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr className="text-gray-500 text-xs uppercase">
+            <th className="p-3 text-left">Employee Name</th>
+            <th className="p-3 text-left">Type</th>
+            <th className="p-3 text-left">Total Hours</th>
+            <th className="p-3 text-left">Overtime</th>
+
+            {days.map((d) => (
+              <th key={d} className="p-3 text-center">
+                {dayjs(d).format("D MMM")}
+              </th>
+            ))}
           </tr>
         </thead>
+
         <tbody>
-          {employees.map((emp, i) => (
-            <tr key={i} className="border-t hover:bg-gray-50">
-              <td className="p-3 font-medium text-gray-800">{emp.name}</td>
-              <td className="p-3 text-blue-600">{emp.type}</td>
-              <td className="p-3">{emp.total}</td>
-              <td className="p-3">{emp.overtime}</td>
+          {rows.map((row, i) => (
+            <tr key={i} className="border-t">
+              <td className="p-3 font-medium">{row.employeeName}</td>
               <td className="p-3">
-                <StatusBadge status={emp.status} />
+                <span className="inline-block bg-blue-50 text-blue-600 rounded-full px-3 py-1 text-xs font-medium">
+                  {row.employeeType === 'Fulltime' ? 'Full time' : row.employeeType}
+                </span>
               </td>
-              <td className="p-3 text-gray-500">⋮</td>
+              <td className="p-3">{row.totalHours ? row.totalHours.toFixed(1) : '0'} h</td>
+              <td className="p-3">{row.totalOvertime ? row.totalOvertime.toFixed(1) : '0'} h</td>
+
+              {days.map((d) => (
+                <td key={d} className="p-3 text-center">{row.days[d]}</td>
+              ))}
+
             </tr>
           ))}
         </tbody>

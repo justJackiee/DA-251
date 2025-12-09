@@ -6,7 +6,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
       port:s:
-        - "5000:5000"
+        - "9000:9000"
   postgres:
     image: postgres:15
     container_name: my_postgres

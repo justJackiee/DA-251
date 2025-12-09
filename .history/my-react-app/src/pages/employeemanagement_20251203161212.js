@@ -20,7 +20,7 @@ function EmployeeManagement() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/employees');
+        const response = await axios.get('http://localhost:9000/api/employees');
         const apiData = response.data;
 
         // 4. MAPPING DỮ LIỆU (ĐÃ SỬA LỖI)

@@ -87,10 +87,10 @@ function CEmployeeTable({
   const pagedEmployees = (localEmployees || []).slice(startIndex, endIndex);
 
   // Resolve API base: prefer REACT_APP_API_BASE, otherwise when running the dev server
-  // on port 3000 assume backend is on localhost:5000. When built, REACT_APP_API_BASE
+  // on port 3000 assume backend is on localhost:9000. When built, REACT_APP_API_BASE
   // should be set or relative URLs will be used.
   const API_BASE = (process.env.REACT_APP_API_BASE && process.env.REACT_APP_API_BASE.trim()) ||
-    (typeof window !== 'undefined' && window.location && window.location.port === '3000' ? 'http://localhost:5000' : '');
+    (typeof window !== 'undefined' && window.location && window.location.port === '3000' ? 'http://localhost:9000' : '');
 
   const handleEdit = (item) => {
     if (onEdit) {

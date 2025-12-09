@@ -1,15 +1,27 @@
 import backgroundImage from "../image/background-login.jpeg";
 import React, { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const navigate = useNavigate();
+
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Email:", email);
     console.log("Password:", password);
-    // TODO: Add login logic here
+    // TODO: Replace with real authentication.
+    // For now, mark authenticated and navigate to dashboard on submit.
+    try {
+      localStorage.setItem('isAuthenticated', 'true');
+      // notify other components in the same window
+      window.dispatchEvent(new Event('authChange'));
+    } catch (err) {
+      // ignore storage errors
+    }
+    navigate('/dashboard');
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export function HRNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,6 +22,17 @@ export function HRNavbar() {
 
   const location = useLocation();
   const current = location.pathname || '/';
+
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem('isAuthenticated')));
+
+  useEffect(() => {
+    const onAuthChange = () => setIsAuthenticated(Boolean(localStorage.getItem('isAuthenticated')));
+    window.addEventListener('authChange', onAuthChange);
+    // also update on location change (in case login sets storage without dispatch)
+    onAuthChange();
+    return () => window.removeEventListener('authChange', onAuthChange);
+  }, [location.pathname]);
 
   const linkColor = (path) => (current === path ? '#fc6544' : '#a8a8a8ff');
 
@@ -48,7 +59,7 @@ export function HRNavbar() {
         position: 'relative'
       }}>
         {/* Left side: Brand */}
-         {isMobile && (
+         {isMobile && isAuthenticated && (
           <div style={{ marginLeft: '0.5rem', zIndex: 20 }}>
             <button
               onClick={toggleMenu}
@@ -71,10 +82,10 @@ export function HRNavbar() {
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',
-          // On desktop we position the brand absolutely to allow a centered menu.
-          // On mobile we keep it in normal flow so it doesn't overlap the hamburger button.
+          // Center the logo when not authenticated on desktop; otherwise position to left.
           position: isMobile ? 'relative' : 'absolute',
-          left: isMobile ? '0.5rem' : '1rem',
+          left: isMobile ? '0.5rem' : (isAuthenticated ? '1rem' : '50%'),
+          transform: (!isMobile && !isAuthenticated) ? 'translateX(-50%)' : undefined,
           zIndex: 10
         }}>
           {/* Brand / Logo and Text Container */}
@@ -122,7 +133,7 @@ export function HRNavbar() {
        
         
         {/* Center: Desktop Menu */}
-        {!isMobile && (
+        {!isMobile && isAuthenticated && (
           <div style={{ 
             display: 'flex',
             gap: '3.5rem', 
@@ -140,15 +151,7 @@ export function HRNavbar() {
             }}>
               Dashboard
             </Link>
-            <a href="/login" style={{ 
-              textDecoration: 'none', 
-              color: '#a8a8a8ff', 
-              fontSize: '1rem', 
-              fontWeight: '650',
-              fontFamily: 'Baloo 2, sans-serif'
-            }}>
-              Login
-            </a>
+            {/* Login moved to right-side as a button on desktop */}
             <a href="/employeemanagement" style={{ 
               textDecoration: 'none', 
               color: linkColor('/employeemanagement'), 
@@ -189,23 +192,50 @@ export function HRNavbar() {
         )}
         
   {/* Right side: Button and Mobile Menu (hidden on mobile) */}
-  <div style={{ display: 'flex', alignItems: 'center' }}>
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    position: isMobile ? 'relative' : 'absolute',
+    right: isMobile ? '0.5rem' : '1rem',
+    top: 0,
+    height: '50px',
+    zIndex: 20
+  }}>
           {/* Desktop Button - Hidden on mobile */}
-          {/* {!isMobile && (
-            <button style={{
-              backgroundColor: '#374151',
-              color: 'white',
-              padding: '0.5rem 1rem',
-              border: 'none',
-              borderRadius: '0.375rem',
+          {!isAuthenticated && (
+            <Link to="/login" style={{
+              textDecoration: 'none',
+              display: 'inline-block',
+              backgroundColor: '#21078cff',
+              color: '#ffffff',
+              padding: '0.45rem 0.9rem',
+              borderRadius: '6px',
+              border: '2px solid #fc6544',
               cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              fontFamily: 'Baloo 2, sans-serif'
+              fontSize: '0.95rem',
+              fontWeight: '700',
+              fontFamily: 'Baloo 2, sans-serif',
+              marginLeft: '0.75rem'
             }}>
-              GET STARTED
-            </button>
-          )} */}
+              Login
+            </Link>
+          )}
+          {!isMobile && isAuthenticated && (
+              <button type="button" onClick={() => { localStorage.removeItem('isAuthenticated'); setIsAuthenticated(false); navigate('/login'); }} style={{
+                backgroundColor: '#ffffff',
+              color: '#21078cff',
+              padding: '0.35rem 0.8rem',
+              borderRadius: '6px',
+              border: '2px solid #fc6544',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: '700',
+              fontFamily: 'Baloo 2, sans-serif',
+              marginLeft: '0.75rem'
+              }}>
+                Logout
+              </button>
+          )}
           
           {/* Desktop-only button (hidden on mobile) - kept for symmetry if needed */}
           {/* Hide the hamburger on desktop: only show mobile hamburger (left side) */}
@@ -257,6 +287,19 @@ export function HRNavbar() {
           }}>
             Dashboard
           </Link>
+          {!isAuthenticated && (
+            <Link to="/login" style={{ 
+              textDecoration: 'none', 
+              color: '#374151', 
+              fontSize: '1rem',
+              padding: '1rem 0',
+              borderBottom: '1px solid #f3f4f6',
+              fontFamily: 'Baloo 2, sans-serif'
+            }}>
+              Login
+            </Link>
+          )}
+          
           <Link to="/employeemanagement" style={{ 
             textDecoration: 'none', 
             color: linkColor('/employeemanagement'), 
@@ -297,6 +340,22 @@ export function HRNavbar() {
           }}>
             Payroll
           </a>
+          {isAuthenticated && (
+            <button type="button" onClick={() => { localStorage.removeItem('isAuthenticated'); setIsAuthenticated(false); navigate('/login'); }} style={{
+              backgroundColor: '#ffffff',
+              color: '#21078cff',
+              padding: '0.35rem 0.8rem',
+              borderRadius: '6px',
+              border: '2px solid #fc6544',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              fontWeight: '700',
+              fontFamily: 'Baloo 2, sans-serif',
+              marginLeft: '0.75rem'
+            }}>
+              Logout
+            </button>
+          )}
           {/* <button style={{
             backgroundColor: '#374151',
             color: 'white',

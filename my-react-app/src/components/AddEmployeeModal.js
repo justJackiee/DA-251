@@ -133,7 +133,6 @@ const buildPayload = (formData) => {
   return {
     fName,
     lName,
-    // Normalize sex to the DB enum label (fallback to original value)
     sex: GENDER_MAP[formData.sex] || formData.sex,
     phone: formData.phone,
     email: formData.email,

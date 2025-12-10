@@ -63,4 +63,16 @@ public class FulltimePayslip {
     public java.util.List<FulltimeActualAllowance> getAllowances() { return allowances; }
     public java.util.List<FulltimeActualBonus> getBonuses() { return bonuses; }
     public java.util.List<FulltimePayslipDeduction> getDeductions() { return deductions; }
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payroll_id", insertable = false, updatable = false)
+    private Payroll payroll;
+
+    public Payroll getPayroll() {
+        return payroll;
+    }
+
+    public void setPayroll(Payroll payroll) {
+        this.payroll = payroll;
+    }
 }

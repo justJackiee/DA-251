@@ -6,16 +6,20 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "fulltime_actual_allowance")
+@IdClass(PayslipComponentId.class)
 @Data
 public class FulltimeActualAllowance {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Hibernate cần ID, dù DB dùng Composite Key (tạm thời để vậy cho đơn giản)
-
     @Column(name = "payslip_id")
     private Long payslipId;
 
+    @Id
+    @Column(name = "stt")
     private Integer stt;
+
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "amount")
     private BigDecimal amount;
 }

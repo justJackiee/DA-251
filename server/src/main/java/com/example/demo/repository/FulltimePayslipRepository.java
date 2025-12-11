@@ -40,4 +40,10 @@ public interface FulltimePayslipRepository extends JpaRepository<FulltimePayslip
         LIMIT 1
     """, nativeQuery = true)
     List<PayslipHistoryDTO> findLatest(@Param("empId") Long empId);
+
+    @Query(value = "SELECT * FROM view_freelance_payslip_detail WHERE payslip_id = :id", nativeQuery = true)
+    Optional<PayslipDetailView> findDetailView(@Param("id") Long id);
+
+    // Hàm JPA chuẩn để tìm kiếm (Dùng để check duplicate khi tính lương)
+    Optional<FreelancePayslip> findByPayrollIdAndEmployeeId(Long payrollId, Long employeeId);
 }

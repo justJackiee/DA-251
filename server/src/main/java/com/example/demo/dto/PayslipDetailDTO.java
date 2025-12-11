@@ -1,28 +1,34 @@
 package com.example.demo.dto;
 
 import lombok.Data;
-import java.math.BigDecimal;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
+import java.math.BigDecimal; // Import quan trọng
 import java.util.List;
+import java.util.Map;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PayslipDetailDTO {
-    // Header
-    private String employeeName;
-    private String period; // e.g., "May 2025"
+
+    private Long payslipId;
+    private Long payrollId;
+    private Long employeeId;
     
-    // Body
+    // Đổi tên biến cho khớp với code Service (setFullName)
+    private String fullName; 
+    private String bankAccountNumber;
+    
+    // Thêm 2 trường này (dùng BigDecimal để khớp với Entity)
     private BigDecimal grossSalary;
     private BigDecimal netSalary;
-    
-    // Các danh sách chi tiết (Cấu trúc linh động cho cả Fulltime/Freelance)
-    private List<Item> allowances;
-    private List<Item> bonuses;
-    private List<Item> deductions;
 
-    @Data
-    @lombok.AllArgsConstructor
-    public static class Item {
-        private String name;
-        private BigDecimal amount;
-    }
+    // Các list chi tiết
+    private List<Map<String, Object>> allowances;
+    private List<Map<String, Object>> bonuses;
+    private List<Map<String, Object>> deductions;
 }

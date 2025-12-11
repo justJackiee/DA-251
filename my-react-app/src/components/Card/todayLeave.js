@@ -1,17 +1,20 @@
-import {UserMinus} from 'lucide-react';
+import { UserMinus } from 'lucide-react';
 
-export default function TodayLeave() {
+export default function TodayLeave({ count = 0 }) {
     return (
-    <div className="bg-white rounded-xl shadow p-5 w-48 leading-tight">
-        <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-800">
-            Today Leave
-            </h2>
-            <UserMinus className="w-4 h-4 text-indigo-900"/>
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-sm border border-amber-100 p-5 hover:shadow-md transition-all duration-300">
+            <div className="flex justify-between items-center">
+                <h2 className="text-sm font-semibold text-gray-600">
+                    On Leave
+                </h2>
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                    <UserMinus className="w-5 h-5 text-amber-600" />
+                </div>
+            </div>
+            <div className="mt-4">
+                <h2 className="text-4xl font-bold text-gray-800">{count}</h2>
+                <p className="text-xs text-amber-600 mt-1 font-medium">approved leaves today</p>
+            </div>
         </div>
-        <div className="flex items-end font-bold gap-1 mt-2">
-            <h2 className="text-4xl text-gray-800">2</h2>
-        </div>
-    </div>
-  );
+    );
 }

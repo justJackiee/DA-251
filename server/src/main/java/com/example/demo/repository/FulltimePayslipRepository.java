@@ -2,6 +2,7 @@ package com.example.demo.repository;
 
 import com.example.demo.dto.PayslipHistoryDTO;
 import com.example.demo.entity.FulltimePayslip;
+import com.example.demo.entity.FulltimePayslipView;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FulltimePayslipRepository extends JpaRepository<FulltimePayslip, Long> {
@@ -41,9 +43,9 @@ public interface FulltimePayslipRepository extends JpaRepository<FulltimePayslip
     """, nativeQuery = true)
     List<PayslipHistoryDTO> findLatest(@Param("empId") Long empId);
 
-    @Query(value = "SELECT * FROM view_freelance_payslip_detail WHERE payslip_id = :id", nativeQuery = true)
-    Optional<PayslipDetailView> findDetailView(@Param("id") Long id);
+    @Query(value = "SELECT * FROM view_fulltime_payslip_detail WHERE payslip_id = :id", nativeQuery = true)
+    Optional<FulltimePayslipView> findDetailView(@Param("id") Long id);
 
     // Hàm JPA chuẩn để tìm kiếm (Dùng để check duplicate khi tính lương)
-    Optional<FreelancePayslip> findByPayrollIdAndEmployeeId(Long payrollId, Long employeeId);
+    Optional<FulltimePayslip> findByPayrollIdAndEmployeeId(Long payrollId, Long employeeId);
 }

@@ -2,11 +2,12 @@ import logo from './logo.svg';
 import './App.css';
 
 import Login from './pages/login';
-import { HRNavbar } from './components/Navbar';
-import CustomScrollbar from './components/schollbar';
-import Pagination from './components/pagination'
 import Dashboard from './pages/dashboard';
-import EmployeeManagement from './pages/employeemanagement'; // modify to test CEmployeeTable
+import EmployeeManagement from './pages/employeemanagement'; // modify to test CEemployee
+import TimeTracking from "./pages/timetracking";
+import PayrollPage from './pages/payroll'; 
+
+import { HRNavbar } from './components/Navbar';
 import ProfileDetails from "./components/EmployeeProfileDetails/ProfileDetails";
 import Contract from "./pages/contract";
 import {
@@ -15,17 +16,15 @@ import {
   IconButton,
   DropdownButton,
 } from "./components/button";
-import PayrollPage from './pages/payroll';
-
+import Pagination from './components/pagination'
 
 import {
     BrowserRouter as Router,
     Routes,
     Route,
+  Navigate,
 } from "react-router-dom";
-
 import { ThemeProvider } from "@material-tailwind/react";
-import TimeTracking from "./pages/timetracking";
 
 function App() {
   return (
@@ -47,8 +46,6 @@ function App() {
               { label: "Yearly Report", onClick: () => alert("Yearly selected") },
             ]}
           /> */}
-
-          <CustomScrollbar>
             {/* <div className="p-4 md:p-8"> dùng để canh lề (margin)*/}
             <div className="p-1">
               <Routes>
@@ -60,15 +57,14 @@ function App() {
                 <Route path="/timetracking" element={<TimeTracking />} />
                 <Route path="/payroll" element={<PayrollPage />} />
                 <Route path="/" element={
-                  <header className="App-header">
-                    <img src={logo} className="App-logo" alt="logo" />
-                    <h1>Welcome to HR Management System</h1>
-                    <p>Click on Dashboard in the navigation to get started!</p>
-                  </header>
+                  Boolean(localStorage.getItem('isAuthenticated')) ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
                 } />
               </Routes>
             </div>
-          </CustomScrollbar>
         </main>
       </div>
     </Router>

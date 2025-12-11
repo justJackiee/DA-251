@@ -1,4 +1,34 @@
-version: "3.9"
+# version: "3.9"
+
+# services:
+#   server:
+#     build:
+#       context: ./server
+#       dockerfile: Dockerfile
+#     ports:
+#       - "5000:5000"
+#     container_name: my_server
+#     restart: unless-stopped
+#     depends_on:
+#       - postgres
+#     environment:
+#       SPRING_DATASOURCE_URL: jdbc:postgresql://my_postgres:5432/postgres
+#       SPRING_DATASOURCE_USERNAME: postgres
+#       SPRING_DATASOURCE_PASSWORD: 123456
+
+#   postgres:
+#     image: postgres:15
+#     container_name: my_postgres
+#     restart: unless-stopped
+#     ports:
+#       - "5431:5432"
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: 123456
+#       POSTGRES_DB: postgres
+#     volumes:
+#       - ./postgres_data:/var/lib/postgresql/data
+#       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
 
 services:
   postgres:
@@ -22,14 +52,29 @@ services:
       dockerfile: Dockerfile
     container_name: my_server
     ports:
-      - "5000:5000"
+      # Backend inside the container listens on port 9000 (see server logs)
+      # Map host 5000 -> container 9000 so frontend can continue using http://localhost:5000
+      - "5000:9000"
+    container_name: my_server
     restart: unless-stopped
     depends_on:
       - postgres
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
+      # Connect the server to the HRM database created by the init script
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/HRM
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
 
-volumes:
-  pgdata:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - "5431:5432"   # Host 5431 -> Container 5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: postgres
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./db.sql:/docker-entrypoint-initdb.d/db.sql

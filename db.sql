@@ -1,4 +1,6 @@
 CREATE DATABASE "HRM";
+-- Make sure subsequent statements execute in the newly created HRM database
+\connect "HRM"
 -- Xóa các bảng cũ nếu tồn tại (để reset demo)
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
@@ -17,14 +19,15 @@ CREATE TABLE employee_account (
     f_name VARCHAR(50) NOT NULL,
     m_name VARCHAR(50),
     l_name VARCHAR(50) NOT NULL,
-    sex gender_enum,
+    -- Use text for these columns so application (JPA entity) that expects text binds correctly
+    sex text,
     phone VARCHAR(20),
     email VARCHAR(100) UNIQUE NOT NULL,
     bank_account_number VARCHAR(50),
     address TEXT,
     dob DATE,
-    type emp_type_enum NOT NULL, -- Phân loại Fulltime/Freelance
-    status emp_status_enum DEFAULT 'Active',
+    type text NOT NULL, -- Phân loại Fulltime/Freelance
+    status text DEFAULT 'Active',
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL 
 );
@@ -44,7 +47,7 @@ CREATE TABLE fulltime_contract (
     base_salary DECIMAL(15, 2) NOT NULL,
     ot_rate DECIMAL(5, 2) DEFAULT 1.5,
     annual_leave_days INT DEFAULT 12,
-    type contract_type_enum NOT NULL -- Definite/Indefinite
+    type text NOT NULL -- Definite/Indefinite (stored as text to match application mapping)
 );
 
 -- Các bảng chi tiết của Fulltime Contract (Phụ cấp, Thưởng quy định, Khấu trừ, Ngày làm việc)
@@ -263,17 +266,17 @@ INSERT INTO fulltime_contract (employee_id, start_date, end_date, base_salary, o
 
 -- 4. Fulltime Contract Details (Allowances)
 INSERT INTO fulltime_contract_allowance (contract_id, stt, name, amount) VALUES
-(1, 1, 'Transportation Allowance', 1500000.00),
-(1, 2, 'Meal Allowance', 1000000.00),
-(2, 1, 'Transportation Allowance', 1500000.00),
-(3, 1, 'Housing Allowance', 3000000.00),
-(3, 2, 'Transportation Allowance', 2000000.00);
+(1, 1, 'Responsibility Allowance', 1500000.00),
+(1, 2, 'Living Allowance', 1000000.00),
+(2, 1, 'Responsibility Allowance', 1500000.00),
+(3, 1, 'Travel Allowance', 3000000.00),
+(3, 2, 'Responsibility Allowance', 2000000.00);
 
 -- 5. Fulltime Contract Bonus
 INSERT INTO fulltime_contract_bonus (contract_id, stt, name, amount, rate) VALUES
 (1, 1, 'Performance Bonus', NULL, 10.00),
-(2, 1, 'Quarterly Bonus', 2000000.00, NULL),
-(3, 1, 'Annual Bonus', NULL, 15.00);
+(2, 1, 'Quarter Bonus', 2000000.00, NULL),
+(3, 1, 'Year Bonus', NULL, 15.00);
 
 -- 6. Fulltime Contract Deduction
 INSERT INTO fulltime_contract_deduction (contract_id, stt, name, amount, rate) VALUES
@@ -317,18 +320,122 @@ INSERT INTO freelance_contract_penalty (contract_id, stt, name, amount, rate) VA
 (1, 1, 'Late Delivery Penalty', NULL, 5.00),
 (2, 1, 'Quality Issue Penalty', 3000000.00, NULL);
 
--- 11. Timesheet (November 2024 data)
+-- 11. Timesheet
+-- (November 2025 data)
+--Week 1
 INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
-('2024-11-18', '2024-11-18 08:05:00', '2024-11-18 17:10:00', 1),
-('2024-11-18', '2024-11-18 08:55:00', '2024-11-18 18:05:00', 2),
-('2024-11-18', '2024-11-18 08:30:00', '2024-11-18 17:35:00', 3),
-('2024-11-19', '2024-11-19 08:00:00', '2024-11-19 17:05:00', 1),
-('2024-11-19', '2024-11-19 09:10:00', '2024-11-19 18:00:00', 2),
-('2024-11-19', '2024-11-19 08:25:00', '2024-11-19 19:00:00', 3),
-('2024-11-20', '2024-11-20 08:10:00', '2024-11-20 17:15:00', 1),
-('2024-11-20', '2024-11-20 09:00:00', '2024-11-20 18:10:00', 2),
-('2024-11-21', '2024-11-21 08:00:00', '2024-11-21 17:00:00', 1),
-('2024-11-21', '2024-11-21 09:05:00', '2024-11-21 18:00:00', 2);
+('2025-11-03','2025-11-03 07:55','2025-11-03 17:00',1),
+('2025-11-03','2025-11-03 08:10','2025-11-03 18:05',2),
+('2025-11-03','2025-11-03 08:05','2025-11-03 17:40',3),
+
+('2025-11-04','2025-11-04 08:05','2025-11-04 17:18',1),
+('2025-11-04','2025-11-04 08:12','2025-11-04 18:00',2),
+('2025-11-04','2025-11-04 07:58','2025-11-04 17:10',3),
+
+('2025-11-05','2025-11-05 07:50','2025-11-05 17:25',1),
+('2025-11-05','2025-11-05 08:15','2025-11-05 18:15',2),
+('2025-11-05','2025-11-05 08:00','2025-11-05 17:00',3),
+
+('2025-11-06','2025-11-06 08:00','2025-11-06 17:00',1),
+('2025-11-06','2025-11-06 08:05','2025-11-06 18:20',2),
+('2025-11-06','2025-11-06 07:55','2025-11-06 17:45',3),
+
+('2025-11-07','2025-11-07 08:10','2025-11-07 17:22',1),
+('2025-11-07','2025-11-07 08:00','2025-11-07 18:00',2),
+('2025-11-07','2025-11-07 08:08','2025-11-07 17:55',3);
+
+--Week 2
+INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
+('2025-11-10','2025-11-10 07:57','2025-11-10 17:05',1),
+('2025-11-10','2025-11-10 08:10','2025-11-10 18:10',2),
+('2025-11-10','2025-11-10 07:52','2025-11-10 17:42',3),
+
+('2025-11-11','2025-11-11 08:03','2025-11-11 17:00',1),
+('2025-11-11','2025-11-11 08:12','2025-11-11 18:25',2),
+('2025-11-11','2025-11-11 08:05','2025-11-11 17:50',3),
+
+('2025-11-12','2025-11-12 07:55','2025-11-12 17:18',1),
+('2025-11-12','2025-11-12 08:08','2025-11-12 18:00',2),
+('2025-11-12','2025-11-12 08:00','2025-11-12 17:30',3),
+
+('2025-11-13','2025-11-13 07:50','2025-11-13 17:10',1),
+('2025-11-13','2025-11-13 08:10','2025-11-13 18:20',2),
+('2025-11-13','2025-11-13 07:58','2025-11-13 17:00',3),
+
+('2025-11-14','2025-11-14 08:05','2025-11-14 17:00',1),
+('2025-11-14','2025-11-14 08:15','2025-11-14 18:12',2),
+('2025-11-14','2025-11-14 08:10','2025-11-14 17:38',3);
+
+--Week 3 
+INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
+('2025-11-17','2025-11-17 07:55','2025-11-17 17:30',1),
+('2025-11-17','2025-11-17 08:12','2025-11-17 18:00',2),
+('2025-11-17','2025-11-17 08:00','2025-11-17 17:45',3),
+
+('2025-11-18','2025-11-18 07:57','2025-11-18 17:00',1),
+('2025-11-18','2025-11-18 08:05','2025-11-18 18:15',2),
+('2025-11-18','2025-11-18 08:10','2025-11-18 17:33',3),
+
+('2025-11-19','2025-11-19 08:05','2025-11-19 17:10',1),
+('2025-11-19','2025-11-19 08:14','2025-11-19 18:08',2),
+('2025-11-19','2025-11-19 07:55','2025-11-19 17:58',3),
+
+('2025-11-20','2025-11-20 07:50','2025-11-20 17:00',1),
+('2025-11-20','2025-11-20 08:10','2025-11-20 18:00',2),
+('2025-11-20','2025-11-20 08:05','2025-11-20 17:45',3),
+
+('2025-11-21','2025-11-21 08:02','2025-11-21 17:22',1),
+('2025-11-21','2025-11-21 08:12','2025-11-21 18:05',2),
+('2025-11-21','2025-11-21 07:57','2025-11-21 17:37',3);
+
+--Week 4
+INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
+('2025-11-24','2025-11-24 07:55','2025-11-24 17:10',1),
+('2025-11-24','2025-11-24 08:00','2025-11-24 18:20',2),
+('2025-11-24','2025-11-24 07:50','2025-11-24 17:30',3),
+
+('2025-11-25','2025-11-25 08:00','2025-11-25 17:00',1),
+('2025-11-25','2025-11-25 07:59','2025-11-25 18:08',2),
+('2025-11-25','2025-11-25 07:55','2025-11-25 17:48',3),
+
+('2025-11-26','2025-11-26 07:58','2025-11-26 17:15',1),
+('2025-11-26','2025-11-26 08:00','2025-11-26 18:00',2),
+('2025-11-26','2025-11-26 08:05','2025-11-26 17:41',3),
+
+('2025-11-27','2025-11-27 08:03','2025-11-27 17:00',1),
+('2025-11-27','2025-11-27 7:50','2025-11-27 18:10',2),
+('2025-11-27','2025-11-27 07:58','2025-11-27 17:55',3),
+
+('2025-11-28','2025-11-28 07:50','2025-11-28 17:23',1),
+('2025-11-28','2025-11-28 07:45','2025-11-28 18:00',2),
+('2025-11-28','2025-11-28 08:00','2025-11-28 17:40',3);
+
+-- ============================
+-- TIMESHEET: DECEMBER 2025 (01 → 05)
+-- ============================
+
+INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
+('2025-12-01','2025-12-01 07:55','2025-12-01 17:12',1),
+('2025-12-01','2025-12-01 07:55','2025-12-01 18:10',2),
+('2025-12-01','2025-12-01 08:05','2025-12-01 17:40',3),
+
+('2025-12-02','2025-12-02 07:58','2025-12-02 17:00',1),
+('2025-12-02','2025-12-02 08:00','2025-12-02 18:20',2),
+('2025-12-02','2025-12-02 07:52','2025-12-02 17:55',3),
+
+('2025-12-03','2025-12-03 08:00','2025-12-03 17:18',1),
+('2025-12-03','2025-12-03 08:12','2025-12-03 18:00',2),
+('2025-12-03','2025-12-03 07:55','2025-12-03 17:33',3),
+
+('2025-12-04','2025-12-04 07:50','2025-12-04 17:00',1),
+('2025-12-04','2025-12-04 08:00','2025-12-04 18:12',2),
+('2025-12-04','2025-12-04 08:05','2025-12-04 17:48',3),
+
+('2025-12-05','2025-12-05 07:57','2025-12-05 17:25',1),
+('2025-12-05','2025-12-05 08:05','2025-12-05 18:00',2),
+('2025-12-05','2025-12-05 07:54','2025-12-05 17:50',3);
+
+
 
 -- 12. Leave Requests
 INSERT INTO leave_request (start_date, end_date, leave_type, reason, is_approved, employee_create, hr_approve) VALUES
@@ -353,11 +460,11 @@ INSERT INTO fulltime_payslip (payroll_id, employee_id, contract_id, net_salary, 
 
 -- 16. Fulltime Actual Allowance
 INSERT INTO fulltime_actual_allowance (payslip_id, stt, name, amount) VALUES
-(1, 1, 'Transportation Allowance', 1500000.00),
-(1, 2, 'Meal Allowance', 1000000.00),
-(2, 1, 'Transportation Allowance', 1500000.00),
-(3, 1, 'Housing Allowance', 3000000.00),
-(3, 2, 'Transportation Allowance', 2000000.00);
+(1, 1, 'Responsibility Allowance', 1500000.00),
+(1, 2, 'Living Allowance', 1000000.00),
+(2, 1, 'Responsibility Allowance', 1500000.00),
+(3, 1, 'Travel Allowance', 3000000.00),
+(3, 2, 'Responsibility Allowance', 2000000.00);
 
 -- 17. Fulltime Actual Bonus
 INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES
@@ -387,6 +494,12 @@ INSERT INTO freelance_actual_bonus (payslip_id, stt, name, amount) VALUES
 -- 21. Freelance Actual Penalty
 INSERT INTO freelance_actual_penalty (payslip_id, stt, name, amount) VALUES
 (1, 1, 'Late Delivery Penalty', 2000000.00);
+
+ALTER TABLE fulltime_contract 
+ADD COLUMN document_path VARCHAR(500);
+
+ALTER TABLE freelance_contract 
+ADD COLUMN document_path VARCHAR(500);
 
 -- ============================================
 -- VERIFICATION QUERIES
@@ -420,3 +533,379 @@ FROM payroll p
 LEFT JOIN fulltime_payslip fps ON p.id = fps.payroll_id
 LEFT JOIN freelance_payslip flps ON p.id = flps.payroll_id
 GROUP BY p.id, p.month, p.year, p.status;
+
+CREATE OR REPLACE PROCEDURE sp_generate_fulltime_payslip(
+    p_payroll_id INT,
+    p_employee_id INT,
+    p_actual_work_days INT,
+    p_ot_hours DECIMAL(15, 2),
+    -- JSON input structure: {"performance": 100, "cycle": 200, "holiday": 300, "other": 400}
+    p_manual_bonus JSONB DEFAULT '{}'::JSONB
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+-- Constants
+    WORK_DAYS_STANDARD CONSTANT INT := 26;
+    HOURS_STANDARD_DAY CONSTANT INT := 8;
+    HOURS_STANDARD_MONTH CONSTANT INT := WORK_DAYS_STANDARD * HOURS_STANDARD_DAY;
+    SELF_DEDUCTION CONSTANT DECIMAL(15, 2) := 11000000.00;
+
+    v_payroll_status payroll_status_enum;
+
+    -- Variables
+    v_contract_id INT;
+    v_base_salary DECIMAL(15, 2);
+    v_payslip_id INT;
+    
+    -- Allowances
+    v_responsibility_allowance DECIMAL(15, 2) := 0; 
+    v_living_allowance DECIMAL(15, 2) := 0; 
+    v_travel_allowance DECIMAL(15, 2) := 0;
+    
+    -- Bonuses (Updated)
+    v_performance_bonus DECIMAL(15, 2) := 0;
+    v_cycle_bonus DECIMAL(15, 2) := 0; -- Quý/Năm
+    v_holiday_bonus DECIMAL(15, 2) := 0;
+    v_other_bonus DECIMAL(15, 2) := 0;
+    
+    -- Calculation vars
+    v_ot_rate DECIMAL(15, 2) := 0;
+    v_ot_amount DECIMAL(15, 2) := 0;
+    v_total_taxed_allowance DECIMAL(15, 2); 
+    v_total_bonus DECIMAL(15, 2);
+    v_contract_gross DECIMAL(15, 2);
+    v_salary_by_workday DECIMAL(15, 2); 
+    v_actual_gross_income DECIMAL(15, 2);
+    
+    -- Deductions
+    v_bhxh DECIMAL(15, 2);
+    v_bhyt DECIMAL(15, 2);
+    v_bhtn DECIMAL(15, 2);
+    v_total_statutory_deduction DECIMAL(15, 2);
+    v_other_deduction DECIMAL(15, 2);
+    v_taxable_income DECIMAL(15, 2) := 0; 
+    v_tax DECIMAL(15, 2) := 0;            
+    v_net_income DECIMAL(15, 2); 
+
+BEGIN
+    -- [MỚI] 1. CHECK STATUS (LOCK MECHANISM)
+    SELECT status INTO v_payroll_status FROM payroll WHERE id = p_payroll_id;
+    IF v_payroll_status = 'Paid' THEN
+        RAISE EXCEPTION 'PAYROLL_LOCKED: Kỳ lương này đã được thanh toán (Paid). Không thể tính lại.';
+    END IF;
+
+    -- 2. GET CONTRACT
+    SELECT contract_id, base_salary, ot_rate
+    INTO v_contract_id, v_base_salary, v_ot_rate
+    FROM fulltime_contract
+    WHERE employee_id = p_employee_id
+    ORDER BY start_date DESC LIMIT 1;
+
+    IF v_contract_id IS NULL THEN
+        RAISE NOTICE 'No active fulltime contract found for Employee ID %', p_employee_id;
+        RETURN;
+    END IF;
+
+    -- 3. GET ALLOWANCES
+    SELECT COALESCE(SUM(CASE WHEN name = 'Responsibility Allowance' THEN amount ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN name = 'Living Allowance' THEN amount ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN name = 'Travel Allowance' THEN amount ELSE 0 END), 0)
+    INTO v_responsibility_allowance, v_living_allowance, v_travel_allowance
+    FROM fulltime_contract_allowance
+    WHERE contract_id = v_contract_id;
+
+    -- 4. PROCESS MANUAL BONUSES (UPDATED)
+    IF p_manual_bonus IS NOT NULL THEN
+        v_performance_bonus := COALESCE((p_manual_bonus->>'performance')::DECIMAL, 0);
+        v_cycle_bonus := COALESCE((p_manual_bonus->>'cycle')::DECIMAL, 0);
+        v_holiday_bonus := COALESCE((p_manual_bonus->>'holiday')::DECIMAL, 0);
+        v_other_bonus := COALESCE((p_manual_bonus->>'other')::DECIMAL, 0);
+    END IF;
+
+    -- 5. CALC OT & GROSS
+    IF p_ot_hours > 0 AND v_ot_rate IS NOT NULL THEN
+        v_ot_amount := (v_base_salary / HOURS_STANDARD_MONTH) * p_ot_hours * v_ot_rate;
+    END IF;
+
+    v_total_taxed_allowance := v_responsibility_allowance + v_living_allowance;
+    v_total_bonus := v_performance_bonus + v_cycle_bonus + v_holiday_bonus + v_other_bonus;
+    
+    v_contract_gross := v_base_salary + v_total_taxed_allowance;
+    v_salary_by_workday := (v_contract_gross / WORK_DAYS_STANDARD) * p_actual_work_days;
+    v_actual_gross_income := v_salary_by_workday + v_total_bonus + v_ot_amount + v_travel_allowance;
+
+    -- 6. CALC DEDUCTIONS
+    SELECT COALESCE(SUM(CASE WHEN name = 'Social Insurance' THEN (v_base_salary * rate / 100.0) ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN name = 'Health Insurance' THEN (v_base_salary * rate / 100.0) ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN name = 'Accident Insurance' THEN (v_base_salary * rate / 100.0) ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN name = 'Other Deduction' THEN amount ELSE 0 END), 0)
+    INTO v_bhxh, v_bhyt, v_bhtn, v_other_deduction
+    FROM fulltime_contract_deduction
+    WHERE contract_id = v_contract_id;
+
+    v_total_statutory_deduction := v_bhxh + v_bhyt + v_bhtn;
+    v_taxable_income := GREATEST(0, v_actual_gross_income - v_travel_allowance - v_ot_amount - v_total_statutory_deduction - SELF_DEDUCTION - v_other_deduction);
+
+    IF v_taxable_income > 0 THEN
+        -- Bậc 7 (Trên 80 triệu)
+        IF v_taxable_income > 80000000 THEN
+            v_tax := v_tax + (v_taxable_income - 80000000) * 0.35;
+            v_taxable_income := 80000000;
+        END IF;
+
+        -- Bậc 6 (Trên 52 đến 80 triệu)
+        IF v_taxable_income > 52000000 THEN
+            v_tax := v_tax + (v_taxable_income - 52000000) * 0.30;
+            v_taxable_income := 52000000;
+        END IF;
+
+        -- Bậc 5 (Trên 32 đến 52 triệu)
+        IF v_taxable_income > 32000000 THEN
+            v_tax := v_tax + (v_taxable_income - 32000000) * 0.25;
+            v_taxable_income := 32000000;
+        END IF;
+
+        -- Bậc 4 (Trên 18 đến 32 triệu)
+        IF v_taxable_income > 18000000 THEN
+            v_tax := v_tax + (v_taxable_income - 18000000) * 0.20;
+            v_taxable_income := 18000000;
+        END IF;
+
+        -- Bậc 3 (Trên 10 đến 18 triệu)
+        IF v_taxable_income > 10000000 THEN
+            v_tax := v_tax + (v_taxable_income - 10000000) * 0.15;
+            v_taxable_income := 10000000;
+        END IF;
+
+        -- Bậc 2 (Trên 5 đến 10 triệu)
+        IF v_taxable_income > 5000000 THEN
+            v_tax := v_tax + (v_taxable_income - 5000000) * 0.10;
+            v_taxable_income := 5000000;
+        END IF;
+
+        -- Bậc 1 (Đến 5 triệu)
+        v_tax := v_tax + v_taxable_income * 0.05;
+
+    END IF;
+
+    IF p_actual_work_days = 0 THEN
+        v_actual_gross_income := 0;
+        v_total_statutory_deduction := 0;
+        v_tax := 0;
+        v_net_income := 0;
+    ELSE
+        v_net_income := v_actual_gross_income - v_total_statutory_deduction - v_tax;
+    END IF;
+
+    -- 7. CLEANUP OLD DATA
+    DELETE FROM fulltime_actual_allowance 
+    WHERE payslip_id IN (SELECT payslip_id FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    DELETE FROM fulltime_actual_bonus 
+    WHERE payslip_id IN (SELECT payslip_id FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    DELETE FROM fulltime_payslip_deduction 
+    WHERE payslip_id IN (SELECT payslip_id FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    DELETE FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id;
+
+    -- 8. INSERT NEW DATA
+    INSERT INTO fulltime_payslip (payroll_id, employee_id, contract_id, gross_salary, net_salary)
+    VALUES (p_payroll_id, p_employee_id, v_contract_id, v_actual_gross_income, v_net_income)
+    RETURNING payslip_id INTO v_payslip_id;
+
+    INSERT INTO fulltime_actual_allowance (payslip_id, stt, name, amount) VALUES
+    (v_payslip_id, 1, 'Responsibility Allowance', COALESCE(v_responsibility_allowance, 0)),
+    (v_payslip_id, 2, 'Living Allowance', COALESCE(v_living_allowance, 0)),
+    (v_payslip_id, 3, 'Travel Allowance', COALESCE(v_travel_allowance, 0));
+
+    INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES
+    (v_payslip_id, 1, 'Performance Bonus', v_performance_bonus),
+    (v_payslip_id, 2, 'Cycle Bonus (Quarter/Year)', v_cycle_bonus),
+    (v_payslip_id, 3, 'Holiday Bonus', v_holiday_bonus),
+    (v_payslip_id, 4, 'Other Bonus', v_other_bonus),
+    (v_payslip_id, 5, 'Overtime Payment', v_ot_amount);
+
+    INSERT INTO fulltime_payslip_deduction (payslip_id, stt, name, amount) VALUES
+    (v_payslip_id, 1, 'Self Deduction', SELF_DEDUCTION),
+    (v_payslip_id, 2, 'Social Insurance', v_bhxh),
+    (v_payslip_id, 3, 'Health Insurance', v_bhyt),
+    (v_payslip_id, 4, 'Accident Insurance', v_bhtn),
+    (v_payslip_id, 5, 'Other Deduction', v_other_deduction),
+    (v_payslip_id, 6, 'Personal Income Tax', v_tax);
+
+    RAISE NOTICE 'SUCCESS: Payslip ID % Generated.', v_payslip_id;
+END;
+$$;
+
+CREATE OR REPLACE VIEW view_fulltime_payslip_detail AS
+SELECT 
+    fp.payslip_id,
+    fp.payroll_id, -- Thêm cái này để dễ filter theo kỳ lương
+    fp.employee_id,
+    e.f_name || ' ' || e.l_name as full_name,
+    e.bank_account_number,
+    fp.gross_salary,
+    fp.net_salary,
+    -- Gom nhóm Allowances thành JSON Text
+    COALESCE(
+        (
+            SELECT JSON_AGG(json_build_object('name', fa.name, 'amount', fa.amount))
+            FROM fulltime_actual_allowance fa 
+            WHERE fa.payslip_id = fp.payslip_id
+        ), 
+        '[]'::json
+    )::text as allowances_json, -- Cast về text để Java hứng dưới dạng String
+
+    -- Gom nhóm Bonuses thành JSON Text
+    COALESCE(
+        (
+            SELECT JSON_AGG(json_build_object('name', fb.name, 'amount', fb.amount))
+            FROM fulltime_actual_bonus fb 
+            WHERE fb.payslip_id = fp.payslip_id
+        ), 
+        '[]'::json
+    )::text as bonuses_json,
+
+    -- Gom nhóm Deductions thành JSON Text
+    COALESCE(
+        (
+            SELECT JSON_AGG(json_build_object('name', fd.name, 'amount', fd.amount))
+            FROM fulltime_payslip_deduction fd 
+            WHERE fd.payslip_id = fp.payslip_id
+        ), 
+        '[]'::json
+    )::text as deductions_json
+FROM fulltime_payslip fp
+JOIN employee_account e ON fp.employee_id = e.id
+JOIN fulltime_contract fc ON fp.contract_id = fc.contract_id;
+
+
+CREATE OR REPLACE PROCEDURE sp_generate_freelance_payslip(
+    p_payroll_id INT,
+    p_employee_id INT,
+    p_adjustments JSONB DEFAULT '{"bonuses": [], "penalties": []}'::JSONB
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payroll_status payroll_status_enum;
+    v_contract_id INT;
+    v_contract_value DECIMAL(15, 2);
+    v_payslip_id INT;
+    
+    v_total_bonus DECIMAL(15, 2) := 0;
+    v_total_penalty DECIMAL(15, 2) := 0;
+    v_final_amount DECIMAL(15, 2);
+    
+    -- Temp vars
+    r_bonus RECORD;
+    r_penalty RECORD;
+    v_item_amount DECIMAL(15, 2);
+    v_stt INT := 1;
+BEGIN
+    -- 1. Check Status Payroll
+    SELECT status INTO v_payroll_status FROM payroll WHERE id = p_payroll_id;
+    IF v_payroll_status = 'Paid' THEN
+        RAISE EXCEPTION 'PAYROLL_LOCKED: Kỳ lương đã thanh toán.';
+    END IF;
+
+    -- 2. Get Active Contract & Value
+    -- Logic: Lấy hợp đồng mới nhất (hoặc đang active) của Freelancer
+    SELECT contract_id, value 
+    INTO v_contract_id, v_contract_value
+    FROM freelance_contract
+    WHERE employee_id = p_employee_id
+    ORDER BY start_date DESC LIMIT 1;
+
+    IF v_contract_id IS NULL THEN
+        RAISE NOTICE 'No active freelance contract for Emp ID %', p_employee_id;
+        RETURN;
+    END IF;
+
+    -- 3. Calculate Bonuses
+    FOR r_bonus IN SELECT name, amount, rate FROM freelance_contract_bonus WHERE contract_id = v_contract_id LOOP
+        IF (p_adjustments->'bonuses') ? r_bonus.name THEN
+            v_item_amount := COALESCE(r_bonus.amount, v_contract_value * (r_bonus.rate / 100.0));
+            v_total_bonus := v_total_bonus + v_item_amount;
+        END IF;
+    END LOOP;
+
+    -- 4. Calculate Penalties
+    FOR r_penalty IN SELECT name, amount, rate FROM freelance_contract_penalty WHERE contract_id = v_contract_id LOOP
+        IF (p_adjustments->'penalties') ? r_penalty.name THEN
+            v_item_amount := COALESCE(r_penalty.amount, v_contract_value * (r_penalty.rate / 100.0));
+            v_total_penalty := v_total_penalty + v_item_amount;
+        END IF;
+    END LOOP;
+
+    -- 5. Final Calculation
+    v_final_amount := v_contract_value + v_total_bonus - v_total_penalty;
+
+    -- 6. Cleanup Old Data (Để support tính lại - Re-calculate)
+    DELETE FROM freelance_actual_bonus WHERE payslip_id IN (SELECT payslip_id FROM freelance_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    DELETE FROM freelance_actual_penalty WHERE payslip_id IN (SELECT payslip_id FROM freelance_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    DELETE FROM freelance_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id;
+
+    -- 7. Insert Header
+    INSERT INTO freelance_payslip (payroll_id, employee_id, contract_id, final_amount)
+    VALUES (p_payroll_id, p_employee_id, v_contract_id, v_final_amount)
+    RETURNING payslip_id INTO v_payslip_id;
+
+    -- 8. Insert Details (Bonus)
+    v_stt := 1;
+    FOR r_bonus IN SELECT name, amount, rate FROM freelance_contract_bonus WHERE contract_id = v_contract_id LOOP
+        IF (p_adjustments->'bonuses') ? r_bonus.name THEN
+            v_item_amount := COALESCE(r_bonus.amount, v_contract_value * (r_bonus.rate / 100.0));
+            INSERT INTO freelance_actual_bonus (payslip_id, stt, name, amount) 
+            VALUES (v_payslip_id, v_stt, r_bonus.name, v_item_amount);
+            v_stt := v_stt + 1;
+        END IF;
+    END LOOP;
+
+    -- 9. Insert Details (Penalty)
+    v_stt := 1;
+    FOR r_penalty IN SELECT name, amount, rate FROM freelance_contract_penalty WHERE contract_id = v_contract_id LOOP
+        IF (p_adjustments->'penalties') ? r_penalty.name THEN
+            v_item_amount := COALESCE(r_penalty.amount, v_contract_value * (r_penalty.rate / 100.0));
+            INSERT INTO freelance_actual_penalty (payslip_id, stt, name, amount) 
+            VALUES (v_payslip_id, v_stt, r_penalty.name, v_item_amount);
+            v_stt := v_stt + 1;
+        END IF;
+    END LOOP;
+
+    RAISE NOTICE 'SUCCESS: Generated Freelance Payslip ID %. Total Amount: %', v_payslip_id, to_char(v_final_amount, 'FM999,999,999,999');
+END;
+$$;
+
+CREATE OR REPLACE VIEW view_freelance_payslip_detail AS
+SELECT 
+    fp.payslip_id,
+    fp.payroll_id,
+    fp.employee_id,
+    e.f_name || ' ' || e.l_name as full_name,
+    e.bank_account_number,
+    fc.value as contract_total_value, -- Giá trị hợp đồng gốc để tham chiếu
+    fp.final_amount, -- Thực lãnh kỳ này
+    
+    -- Gom nhóm Bonuses thành JSON Text
+    COALESCE(
+        (
+            SELECT JSON_AGG(json_build_object('name', fb.name, 'amount', fb.amount))
+            FROM freelance_actual_bonus fb 
+            WHERE fb.payslip_id = fp.payslip_id
+        ), 
+        '[]'::json
+    )::text as bonuses_json,
+
+    -- Gom nhóm Penalties thành JSON Text
+    COALESCE(
+        (
+            SELECT JSON_AGG(json_build_object('name', fp_pen.name, 'amount', fp_pen.amount))
+            FROM freelance_actual_penalty fp_pen 
+            WHERE fp_pen.payslip_id = fp.payslip_id
+        ), 
+        '[]'::json
+    )::text as penalties_json
+
+FROM freelance_payslip fp
+JOIN employee_account e ON fp.employee_id = e.id
+JOIN freelance_contract fc ON fp.contract_id = fc.contract_id;

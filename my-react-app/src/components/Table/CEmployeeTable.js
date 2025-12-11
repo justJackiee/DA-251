@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import axios from 'axios';
 import { createPortal } from 'react-dom';
+import Pagination from '../pagination';
 
 function CEmployeeTable({ 
   // SỬA LỖI 2: Nhận prop 'data' thay vì 'employees' để khớp với file cha
@@ -7,7 +9,8 @@ function CEmployeeTable({
   columns = null, 
   title = "Employee List",
   showActions = true,
-  onEdit = null 
+  onEdit = null,
+  onAddContract = null
 }) {
   // Gán data vào biến employees để dùng tiếp logic bên dưới
   const employees = data;
@@ -52,6 +55,42 @@ function CEmployeeTable({
   ];
 
   const tableColumns = columns || defaultColumns;
+
+  // Pagination: allow parent to set default pageSize via prop later
+  // For now, use internal client-side pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Keep a local copy of employees so we can update an item's status in-place
+  // without forcing a full page reload which may change ordering.
+  const [localEmployees, setLocalEmployees] = useState(employees);
+
+  // Reset local copy and pagination when the parent data changes
+  // Keep Active employees first and Inactive ones at the bottom; within each group keep id order.
+  useEffect(() => {
+    const statusOrder = (s) => (s === 'Active' ? 0 : 1);
+    const sorted = (employees || []).slice().sort((a, b) => {
+      const sa = statusOrder(a.status);
+      const sb = statusOrder(b.status);
+      if (sa !== sb) return sa - sb;
+      const ai = Number(a.id ?? 0);
+      const bi = Number(b.id ?? 0);
+      return ai - bi;
+    });
+    setLocalEmployees(sorted);
+    setCurrentPage(1);
+  }, [employees]);
+
+  const totalPages = Math.max(1, Math.ceil((localEmployees || []).length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const pagedEmployees = (localEmployees || []).slice(startIndex, endIndex);
+
+  // Resolve API base: prefer REACT_APP_API_BASE, otherwise when running the dev server
+  // on port 3000 assume backend is on localhost:5000. When built, REACT_APP_API_BASE
+  // should be set or relative URLs will be used.
+  const API_BASE = (process.env.REACT_APP_API_BASE && process.env.REACT_APP_API_BASE.trim()) ||
+    (typeof window !== 'undefined' && window.location && window.location.port === '3000' ? 'http://localhost:5000' : '');
 
   const handleEdit = (item) => {
     if (onEdit) {
@@ -98,8 +137,41 @@ function CEmployeeTable({
 
   const handleEditForm = (item) => {
     setOpenMenuId(null);
+    if (onAddContract) return onAddContract(item);
     if (onEdit) return onEdit(item);
     window.location.href = `/employeemanagement/edit/${item.id}`;
+  };
+
+  const handleDelete = async (item) => {
+    // Toggle status instead of deleting
+    const newStatus = item.status === 'Active' ? 'Inactive' : 'Active';
+    const url = `${API_BASE}/api/employees/${item.id}/status`; // update only status
+    const payload = { Status: newStatus, status: newStatus };
+    try {
+      console.log('Updating status for', item.id, 'to', newStatus, 'PUT', url, payload);
+      const resp = await axios.put(url, payload, { headers: { 'Content-Type': 'application/json' } });
+      console.log('Update response', resp && resp.data ? resp.data : resp.status);
+      // close menu
+      setOpenMenuId(null);
+      // update local list in-place so the item's position remains the same
+      setLocalEmployees(prev => {
+        if (!prev) return prev;
+        const updated = prev.map(emp => emp.id === item.id ? { ...emp, status: newStatus } : emp);
+        // re-sort so Inactive move to bottom
+        const statusOrder = (s) => (s === 'Active' ? 0 : 1);
+        updated.sort((a, b) => {
+          const sa = statusOrder(a.status);
+          const sb = statusOrder(b.status);
+          if (sa !== sb) return sa - sb;
+          return Number(a.id ?? 0) - Number(b.id ?? 0);
+        });
+        return updated;
+      });
+    } catch (err) {
+      console.error('Failed to update status', err, err.response ? err.response.data : 'no response');
+      const serverMsg = err.response && err.response.data ? JSON.stringify(err.response.data) : err.message;
+      alert('Failed to update status. Server error: ' + serverMsg + '\nSee console for details.');
+    }
   };
 
   return (
@@ -122,15 +194,15 @@ function CEmployeeTable({
               </tr>
             </thead>
             <tbody>
-              {employees.length === 0 ? (
+              {pagedEmployees.length === 0 ? (
                 <tr>
                   <td colSpan={tableColumns.length + (showActions ? 1 : 0)} className="py-8 text-center text-gray-400">
                     No data found
                   </td>
                 </tr>
               ) : (
-                employees.map((item, rowIndex) => (
-                  <tr key={item.id || rowIndex} className={`${rowIndex % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}>
+                pagedEmployees.map((item, rowIndex) => (
+                  <tr key={item.id || startIndex + rowIndex} className={`${(startIndex + rowIndex) % 2 === 0 ? "bg-gray-50" : "bg-white"} hover:bg-blue-50 transition`}>
                     {tableColumns.map((col, colIndex) => (
                       <td key={colIndex} className="py-3 px-4 text-left border-b text-sm">
                         {/* Logic render an toàn */}
@@ -162,8 +234,15 @@ function CEmployeeTable({
                               className="bg-white border rounded shadow-lg z-50 py-1"
                               style={{ position: 'absolute', top: menuPos.top + 'px', left: menuPos.left + 'px', minWidth: 120 }}
                             >
-                              <button onClick={() => handleEditAction(item)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">View</button>
-                              <button onClick={() => handleEditForm(item)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">Edit</button>
+                              <button onClick={() => handleEditAction(item)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">Employee Detail</button>
+                              <button onClick={() => handleEditForm(item)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100">Add new contract</button>
+                              <button
+                                onClick={() => handleDelete(item)}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${item.status === 'Active' ? 'text-red-600' : 'text-green-600'}`}
+                              >
+                                {item.status === 'Active' ? 'Delete' : 'Activate'}
+                              </button>
+
                             </div>,
                             typeof document !== 'undefined' ? document.body : null
                           )}
@@ -177,9 +256,15 @@ function CEmployeeTable({
           </table>
         </div>
         {employees.length > 0 && (
-          <div className="text-gray-500 text-sm text-right p-3 border-t">
-            Showing {employees.length} record{employees.length !== 1 ? 's' : ''}
-          </div>
+          <Pagination
+            totalItems={employees.length}
+            pageSize={pageSize}
+            currentPage={currentPage}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+            pageSizeOptions={[5,10,20,50]}
+            showRange={true}
+          />
         )}
       </div>
     </div>

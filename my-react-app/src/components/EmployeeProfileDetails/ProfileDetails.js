@@ -43,10 +43,7 @@ export default function ProfileDetails() {
         Phone: employeeData.info.Phone || '',
         Email: employeeData.info.Email || '',
         Address: employeeData.info.Address || '',
-        City: employeeData.info.City || '',
         Position: employeeData.info.Position || '',
-        Department: employeeData.info.Department || '',
-        StartDate: employeeData.info.StartDate || ''
       });
       setShowEditModal(true);
     }
@@ -153,15 +150,19 @@ export default function ProfileDetails() {
           {/* General Info */}
           <section id="general-info" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
             <SectionHeader title="General Information" content="Edit" onEdit={handleEditClick} />
-            <SubSection title="Personal Information">
-              <InfoGrid data={{ "Employee ID": info.ID, Phone: info.Phone, Email: info.Email, Sex: "N/A" }} />
-            </SubSection>
-            <SubSection title="Address Information">
-              <InfoGrid data={{ Address: info.Address, City: info.City }} />
-            </SubSection>
-            <SubSection title="Employment Information">
-              <InfoGrid data={{ "Job Title": info.Position, Department: info.Department, "Start Date": info.StartDate }} />
-            </SubSection>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SubSection title="Personal Information">
+                <InfoGrid data={{ "Employee ID": info.ID, Phone: info.Phone, Email: info.Email, Sex: info.Sex }} cols={1} />
+              </SubSection>
+              <div className="space-y-6">
+                <SubSection title="Address Information">
+                  <InfoGrid data={{ Address: info.Address }} cols={1} />
+                </SubSection>
+                <SubSection title="Employment Information">
+                  <InfoGrid data={{ "Job Title": info.Position }} cols={1} />
+                </SubSection>
+              </div>
+            </div>
           </section>
 
           {/* Contract Section */}
@@ -274,16 +275,6 @@ export default function ProfileDetails() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">City</label>
-                      <input
-                        type="text"
-                        name="City"
-                        value={editFormData.City}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -302,26 +293,6 @@ export default function ProfileDetails() {
                         <option value="Fulltime">Fulltime</option>
                         <option value="Freelance">Freelance</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">Department</label>
-                      <input
-                        type="text"
-                        name="Department"
-                        value={editFormData.Department}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">Start Date</label>
-                      <input
-                        type="date"
-                        name="StartDate"
-                        value={editFormData.StartDate}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
                     </div>
                   </div>
                 </div>
@@ -458,6 +429,18 @@ function SubSection({ title, children, className="" }) {
   return <div className={`mb-4 ${className}`}><h4 className="text-xs text-gray-500 uppercase mb-2">{title}</h4>{children}</div> 
 }
 
-function InfoGrid({ data }) { 
-  return <div className="grid grid-cols-2 gap-2 text-sm">{Object.entries(data).map(([k,v]) => <div key={k}><span className="text-gray-400 block">{k}</span><span>{v || 'N/A'}</span></div>)}</div> 
+function InfoGrid({ data, cols = 2 }) { 
+  // If cols is 1, use 'grid-cols-1', otherwise use 'grid-cols-2'
+  const gridClass = cols === 1 ? 'grid-cols-1' : 'grid-cols-2';
+  
+  return (
+    <div className={`grid ${gridClass} gap-2 text-sm`}>
+      {Object.entries(data).map(([k,v]) => (
+        <div key={k}>
+          <span className="text-gray-400 block">{k}</span>
+          <span>{v || 'N/A'}</span>
+        </div>
+      ))}
+    </div>
+  );
 }

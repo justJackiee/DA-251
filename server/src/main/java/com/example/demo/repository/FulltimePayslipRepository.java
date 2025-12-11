@@ -1,7 +1,8 @@
 package com.example.demo.repository;
 
-import com.example.demo.entity.FulltimePayslip; 
-import com.example.demo.entity.PayslipHistoryDTO; // Import DTO từ package entity
+import com.example.demo.dto.PayslipHistoryDTO;
+import com.example.demo.entity.FulltimePayslip;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,4 +40,10 @@ public interface FulltimePayslipRepository extends JpaRepository<FulltimePayslip
         LIMIT 1
     """, nativeQuery = true)
     List<PayslipHistoryDTO> findLatest(@Param("empId") Long empId);
+
+    @Query(value = "SELECT * FROM view_freelance_payslip_detail WHERE payslip_id = :id", nativeQuery = true)
+    Optional<PayslipDetailView> findDetailView(@Param("id") Long id);
+
+    // Hàm JPA chuẩn để tìm kiếm (Dùng để check duplicate khi tính lương)
+    Optional<FreelancePayslip> findByPayrollIdAndEmployeeId(Long payrollId, Long employeeId);
 }

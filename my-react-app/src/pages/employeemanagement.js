@@ -5,8 +5,6 @@ import AddEmployeeModal from '../components/AddEmployeeModal';
 // import HeaderTabs from '../components/HeaderTabs';
 import FiltersBar from '../components/FiltersBar';
 
-
-
 function EmployeeManagement() {
   // const [activeTab, setActiveTab] = useState('team');
   const [search, setSearch] = useState('');

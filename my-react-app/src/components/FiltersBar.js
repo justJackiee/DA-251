@@ -4,16 +4,18 @@ import { FaSearch } from 'react-icons/fa';
 import AddEmployeeModal from './AddEmployeeModal'; 
 
 export default function FiltersBar({ 
-    search, 
-    onSearch, 
-    filters, 
-    onFilterChange, 
-    onClear, 
-    positions = [], 
-    genders = [], 
-    types = [], 
-    statuses = [],
-    onAddSuccess 
+  search, 
+  onSearch, 
+  filters, 
+  onFilterChange, 
+  onClear, 
+  positions = [], 
+  genders = [], 
+  types = [], 
+  statuses = [],
+  onAddSuccess,
+  showAdd = true,
+  showFilters = true
 }) {
   const [open, setOpen] = useState(false);
   const popupRef = useRef(null);
@@ -37,6 +39,7 @@ export default function FiltersBar({
   const normStatuses = useMemo(() => normalize(statuses), [statuses]);
 
   useEffect(() => {
+    if (!showFilters) return;
     function onDocClick(e) {
       // if click is inside popup, ignore
       if (popupRef.current && popupRef.current.contains(e.target)) return;
@@ -48,8 +51,12 @@ export default function FiltersBar({
       if (e.key === 'Escape') setOpen(false);
     }
     document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, []);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [showFilters]);
 
   // compute popup position anchored to button
   useEffect(() => {
@@ -85,125 +92,127 @@ export default function FiltersBar({
         </div>
 
         {/* Filter Button */}
-        <div className="relative ml-3">
-          <button
-            ref={buttonRef}
-            type="button"
-            onClick={() => setOpen((s) => !s)}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded text-sm hover:shadow"
-            aria-haspopup="dialog"
-            aria-expanded={open}
-          >
-            Filters
-          </button>
-
-          {/* Filter Popup Portal */}
-          {open && popupRef && createPortal(
-            <div
-              ref={popupRef}
-              className="bg-white border rounded shadow-lg z-50 p-3"
-              style={{ position: 'absolute', top: popupPos.top + 'px', left: popupPos.left + 'px', width: 320 }}
+        {showFilters && (
+          <div className="relative ml-3">
+            <button
+              ref={buttonRef}
+              type="button"
+              onClick={() => setOpen((s) => !s)}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded text-sm hover:shadow"
+              aria-haspopup="dialog"
+              aria-expanded={open}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-500">Position</label>
-                  <select
-                    value={filters.position || ''}
-                    onChange={(e) => onFilterChange?.('position', e.target.value)}
-                    className="border rounded px-3 py-2 text-sm w-full"
-                  >
-                    <option value="">All Positions</option>
-                    {normPositions && normPositions.length > 0 ? (
-                      normPositions.map((p) => (
-                        <option key={p} value={p}>{p}</option>
-                      ))
-                    ) : (
-                      // fallback hard-coded examples when no positions provided
-                      <>
-                        <option>Staff</option>
-                      </>
-                    )}
-                  </select>
-                </div>
+              Filters
+            </button>
 
-                <div>
-                  <label className="block text-xs text-gray-500">Gender</label>
-                  <select
-                    value={filters.gender || ''}
-                    onChange={(e) => onFilterChange?.('gender', e.target.value)}
-                    className="border rounded px-3 py-2 text-sm w-full"
-                  >
-                    <option value="">All Genders</option>
-                    {normGenders && normGenders.length > 0 ? (
-                      normGenders.map((g) => <option key={g} value={g}>{g}</option>)
-                    ) : (
-                      <>
-                        <option>Male</option>
-                        <option>Female</option>
-                      </>
-                    )}
-                  </select>
-                </div>
+            {/* Filter Popup Portal */}
+            {open && popupRef && createPortal(
+              <div
+                ref={popupRef}
+                className="bg-white border rounded shadow-lg z-50 p-3"
+                style={{ position: 'absolute', top: popupPos.top + 'px', left: popupPos.left + 'px', width: 320 }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500">Position</label>
+                    <select
+                      value={filters.position || ''}
+                      onChange={(e) => onFilterChange?.('position', e.target.value)}
+                      className="border rounded px-3 py-2 text-sm w-full"
+                    >
+                      <option value="">All Positions</option>
+                      {normPositions && normPositions.length > 0 ? (
+                        normPositions.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))
+                      ) : (
+                        // fallback hard-coded examples when no positions provided
+                        <>
+                          <option>Staff</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-xs text-gray-500">Type</label>
-                  <select
-                    value={filters.type || ''}
-                    onChange={(e) => onFilterChange?.('type', e.target.value)}
-                    className="border rounded px-3 py-2 text-sm w-full"
-                  >
-                    <option value="">All Types</option>
-                    {normTypes && normTypes.length > 0 ? (
-                      normTypes.map((t) => <option key={t} value={t}>{t}</option>)
-                    ) : (
-                      <>
-                        <option>Fulltime</option>
-                        <option>Freelance</option>
-                      </>
-                    )}
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-xs text-gray-500">Gender</label>
+                    <select
+                      value={filters.gender || ''}
+                      onChange={(e) => onFilterChange?.('gender', e.target.value)}
+                      className="border rounded px-3 py-2 text-sm w-full"
+                    >
+                      <option value="">All Genders</option>
+                      {normGenders && normGenders.length > 0 ? (
+                        normGenders.map((g) => <option key={g} value={g}>{g}</option>)
+                      ) : (
+                        <>
+                          <option>Male</option>
+                          <option>Female</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-xs text-gray-500">Status</label>
-                  <select
-                    value={filters.status || ''}
-                    onChange={(e) => onFilterChange?.('status', e.target.value)}
-                    className="border rounded px-3 py-2 text-sm w-full"
-                  >
-                    <option value="">All Statuses</option>
-                    {normStatuses && normStatuses.length > 0 ? (
-                      normStatuses.map((s) => <option key={s} value={s}>{s}</option>)
-                    ) : (
-                      <>
-                        <option>Active</option>
-                        <option>Inactive</option>
-                      </>
-                    )}
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-xs text-gray-500">Type</label>
+                    <select
+                      value={filters.type || ''}
+                      onChange={(e) => onFilterChange?.('type', e.target.value)}
+                      className="border rounded px-3 py-2 text-sm w-full"
+                    >
+                      <option value="">All Types</option>
+                      {normTypes && normTypes.length > 0 ? (
+                        normTypes.map((t) => <option key={t} value={t}>{t}</option>)
+                      ) : (
+                        <>
+                          <option>Fulltime</option>
+                          <option>Freelance</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
 
-                <div className="sm:col-span-2 flex justify-between items-center pt-2">
-                  <button
-                    onClick={() => { onClear?.(); setOpen(false); }}
-                    className="text-sm text-gray-600 underline"
-                  >
-                    Clear filters
-                  </button>
-                  <button
-                    onClick={() => setOpen(false)}
-                    className="px-3 py-1 bg-orange-500 text-white rounded text-sm"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
-            </div>,
-            typeof document !== 'undefined' ? document.body : null
-          )}
-        </div>
+                  <div>
+                    <label className="block text-xs text-gray-500">Status</label>
+                    <select
+                      value={filters.status || ''}
+                      onChange={(e) => onFilterChange?.('status', e.target.value)}
+                      className="border rounded px-3 py-2 text-sm w-full"
+                    >
+                      <option value="">All Statuses</option>
+                      {normStatuses && normStatuses.length > 0 ? (
+                        normStatuses.map((s) => <option key={s} value={s}>{s}</option>)
+                      ) : (
+                        <>
+                          <option>Active</option>
+                          <option>Inactive</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
 
-        <AddEmployeeModal onSuccess={onAddSuccess} />
+                  <div className="sm:col-span-2 flex justify-between items-center pt-2">
+                    <button
+                      onClick={() => { onClear?.(); setOpen(false); }}
+                      className="text-sm text-gray-600 underline"
+                    >
+                      Clear filters
+                    </button>
+                    <button
+                      onClick={() => setOpen(false)}
+                      className="px-3 py-1 bg-orange-500 text-white rounded text-sm"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>,
+              typeof document !== 'undefined' ? document.body : null
+            )}
+          </div>
+        )}
+
+        {showAdd && <AddEmployeeModal onSuccess={onAddSuccess} />}
         
       </div>
     </div>

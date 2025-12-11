@@ -62,7 +62,7 @@ export default function ProfileDetails() {
       console.log("Sending update:", editFormData);
       
       const response = await axios.put(
-        `http://localhost:5000/api/employees/${id}`,
+        `http://localhost:9000/api/employees/${id}`,
         editFormData,
         {
           headers: {
@@ -73,7 +73,7 @@ export default function ProfileDetails() {
       
       console.log("Update response:", response.data);
       
-      const refreshResponse = await axios.get(`http://localhost:5000/api/employees/${id}/profile`);
+      const refreshResponse = await axios.get(`http://localhost:9000/api/employees/${id}/profile`);
       setEmployeeData(refreshResponse.data);
       
       setShowEditModal(false);
@@ -101,7 +101,7 @@ export default function ProfileDetails() {
     setLoadingHistory(true);   // Hiện loading
     try {
       // Gọi API Backend để lấy lịch sử lương
-      const response = await axios.get(`http://localhost:5000/api/employees/${id}/payslip-history`);
+      const response = await axios.get(`http://localhost:9000/api/employees/${id}/payslip-history`);
       setPayslipHistory(response.data);
     } catch (err) {
       console.error("Lỗi lấy lịch sử lương:", err);

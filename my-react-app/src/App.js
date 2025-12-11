@@ -9,6 +9,7 @@ import PayrollPage from './pages/payroll';
 
 import { HRNavbar } from './components/Navbar';
 import ProfileDetails from "./components/EmployeeProfileDetails/ProfileDetails";
+import Contract from "./pages/contract";
 import {
   PrimaryButton,
   SecondaryButton,
@@ -52,7 +53,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/employeemanagement/profile/:id" element={<ProfileDetails />} />
                 <Route path="/employeemanagement" element={<EmployeeManagement />} />
-                <Route path="/contract" element={<h1>Contract Page</h1>} />
+                <Route path="/contract" element={<Contract />} />
                 <Route path="/timetracking" element={<TimeTracking />} />
                 <Route path="/payroll" element={<PayrollPage />} />
                 <Route path="/" element={

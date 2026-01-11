@@ -29,4 +29,23 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, Long> {
             @Param("year") int year);
 
     List<Timesheet> findByDateBetween(LocalDate start, LocalDate end);
+
+    /**
+     * Tính tổng số giờ OT trong tháng.
+     * Logic: (Checkout - Checkin) - 1 giờ nghỉ trưa.
+     * Nếu kết quả > 8 thì lấy phần dư. Cộng dồn lại.
+     */
+    @Query(value = """
+        SELECT COALESCE(SUM(
+            GREATEST(0, (EXTRACT(EPOCH FROM (checkout_time - checkin_time))/3600 - 1) - 8)
+        ), 0)
+        FROM timesheet
+        WHERE employee_id = :empId
+        AND EXTRACT(MONTH FROM date) = :month
+        AND EXTRACT(YEAR FROM date) = :year
+        AND checkout_time IS NOT NULL
+    """, nativeQuery = true)
+    Double calculateTotalOvertimeHours(@Param("empId") Long empId,
+                                       @Param("month") int month,
+                                       @Param("year") int year);
 }

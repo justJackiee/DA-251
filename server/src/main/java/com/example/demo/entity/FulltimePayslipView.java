@@ -33,6 +33,9 @@ public class FulltimePayslipView {
     @Column(name = "net_salary")
     private BigDecimal netSalary;
 
+    @Column(name = "base_salary")
+    private BigDecimal baseSalary;
+
     @Column(name = "allowances_json", columnDefinition = "TEXT")
     private String allowancesJson;
 

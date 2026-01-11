@@ -35,4 +35,11 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 	void updateTypeByIdNative(@Param("id") Long id, @Param("type") String type);
     Employee findByUsername(String username);
 
+	// Để Service biết nhân viên là Fulltime hay Freelance -> Gọi đúng Procedure
+    @Query(value = "SELECT type FROM employee_account WHERE id = :id", nativeQuery = true)
+    String findTypeById(@Param("id") Long id);
+
+    // Lấy danh sách Freelancer đang Active (Để tính lương hàng loạt cho Freelance)
+    @Query(value = "SELECT * FROM employee_account WHERE type = 'Freelance' AND status = 'Active'", nativeQuery = true)
+    List<Employee> findAllActiveFreelance();
 }

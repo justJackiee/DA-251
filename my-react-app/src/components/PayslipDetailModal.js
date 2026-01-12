@@ -35,8 +35,11 @@ const PayslipDetailModal = ({ isOpen, onClose, record }) => {
     // Helper format tiền tệ
     const formatCurrency = (val) => {
         if (val === null || val === undefined) return '0 ₫';
-        return val.toLocaleString('vi-VN') + ' ₫';
+        return Number(val).toLocaleString('vi-VN') + ' ₫';
     };
+
+    // Xác định loại nhân viên để render giao diện phù hợp
+    const isFulltime = record?.role === 'Fulltime' || record?.contractType === 'FULLTIME';
 
     return (
         <div style={styles.overlay}>
@@ -49,58 +52,82 @@ const PayslipDetailModal = ({ isOpen, onClose, record }) => {
 
                 {!loading && detail && (
                     <div style={styles.container}>
-                        {/* Header */}
+                        {/* --- HEADER --- */}
                         <div style={styles.header}>
                             <div>
-                                <h2 style={styles.title}>Detailed Payslip </h2>
+                                <h2 style={styles.title}>Payslip Detail</h2>
                                 <div style={styles.employeeInfo}>
-                                    <span style={styles.employeeName}>{record.fullName}</span>
-                                    <span style={styles.employeeId}>#{record.employeeId || 'N/A'}</span>
+                                    <span style={styles.employeeName}>{detail.fullName || record.fullName}</span>
+                                    <span style={styles.employeeId}>#{detail.employeeId || record.employeeId}</span>
                                 </div>
-                                <span style={record.contractType === 'FULLTIME' ? styles.badgeFulltime : styles.badgeFreelance}>
-                                    {record.contractType}
+                                <span style={isFulltime ? styles.badgeFulltime : styles.badgeFreelance}>
+                                    {isFulltime ? 'Full-Time Contract' : 'Freelance Contract'}
                                 </span>
+                            </div>
+                            <div style={styles.dateInfo}>
+                                {/* Có thể hiển thị thêm tháng/năm nếu cần */}
                             </div>
                         </div>
 
-                        {/* General Info Cards */}
+                        {/* --- GENERAL INFO CARDS --- */}
                         <div style={styles.generalGrid}>
                             <div style={styles.infoCard}>
                                 <label style={styles.label}>Bank Account</label>
                                 <span style={styles.value}>{detail.bankAccountNumber || 'Chưa cập nhật'}</span>
                             </div>
+                            
+                            {/* Logic hiển thị Gross/Value khác nhau */}
                             <div style={styles.infoCard}>
-                                <label style={styles.label}>GROSS</label>
+                                <label style={styles.label}>
+                                    {isFulltime ? 'Total Gross Income' : 'Contract Value'}
+                                </label>
                                 <span style={styles.value}>{formatCurrency(detail.grossSalary)}</span>
                             </div>
+
                             <div style={{...styles.infoCard, ...styles.highlightCard}}>
-                                <label style={{...styles.label}}>NET</label>
+                                <label style={{...styles.label}}>
+                                    {isFulltime ? 'NET INCOME' : 'FINAL PAYMENT'}
+                                </label>
                                 <span style={styles.netValue}>{formatCurrency(detail.netSalary)}</span>
                             </div>
                         </div>
 
                         <hr style={styles.divider} />
 
-                        {/* Detailed Grid (3 Columns) */}
-                        <div style={styles.detailGrid}>
-                            {/* Column 1: Allowances */}
-                            <div style={styles.column}>
-                                <h3 style={styles.colHeader}>Allowances</h3>
-                                <ul style={styles.list}>
-                                    {detail.allowances && detail.allowances.length > 0 ? (
-                                        detail.allowances.map((item, idx) => (
-                                            <li key={idx} style={styles.listItem}>
-                                                <span style={styles.itemName}>{item.name}</span>
-                                                <span style={styles.itemVal}>{formatCurrency(item.amount)}</span>
-                                            </li>
-                                        ))
-                                    ) : (
-                                        <li style={styles.emptyItem}>No allowances</li>
-                                    )}
-                                </ul>
-                            </div>
+                        {/* --- DETAILED GRID --- */}
+                        {/* Fulltime: 3 Cột | Freelance: 2 Cột */}
+                        <div style={{
+                            ...styles.detailGrid,
+                            gridTemplateColumns: isFulltime ? '1fr 1fr 1fr' : '1fr 1fr'
+                        }}>
+                            
+                            {/* COLUMN 1: ALLOWANCES (Chỉ hiện cho Fulltime) */}
+                            {isFulltime && (
+                                <div style={styles.column}>
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <h3 style={styles.colHeader}>Base Salary</h3>
+                                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', padding: '10px 0' }}>
+                                            {formatCurrency(detail.baseSalary)}
+                                        </div>
+                                    </div>
 
-                            {/* Column 2: Bonuses */}
+                                    <h3 style={styles.colHeader}>Allowances</h3>
+                                    <ul style={styles.list}>
+                                        {detail.allowances && detail.allowances.length > 0 ? (
+                                            detail.allowances.map((item, idx) => (
+                                                <li key={idx} style={styles.listItem}>
+                                                    <span style={styles.itemName}>{item.name}</span>
+                                                    <span style={styles.itemVal}>{formatCurrency(item.amount)}</span>
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <li style={styles.emptyItem}>No allowances</li>
+                                        )}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* COLUMN 2: BONUSES (Dùng chung, Freelance hiển thị Bonus dự án) */}
                             <div style={styles.column}>
                                 <h3 style={styles.colHeader}>Bonuses</h3>
                                 <ul style={styles.list}>
@@ -112,14 +139,16 @@ const PayslipDetailModal = ({ isOpen, onClose, record }) => {
                                             </li>
                                         ))
                                     ) : (
-                                        <li style={styles.emptyItem}>No bonus</li>
+                                        <li style={styles.emptyItem}>No bonuses</li>
                                     )}
                                 </ul>
                             </div>
 
-                            {/* Column 3: Deductions */}
+                            {/* COLUMN 3: DEDUCTIONS (Fulltime) / PENALTIES (Freelance) */}
                             <div style={styles.column}>
-                                <h3 style={styles.colHeader}>Deductions</h3>
+                                <h3 style={styles.colHeader}>
+                                    {isFulltime ? 'Deductions & Tax' : 'Penalties'}
+                                </h3>
                                 <ul style={styles.list}>
                                     {detail.deductions && detail.deductions.length > 0 ? (
                                         detail.deductions.map((item, idx) => (
@@ -129,7 +158,9 @@ const PayslipDetailModal = ({ isOpen, onClose, record }) => {
                                             </li>
                                         ))
                                     ) : (
-                                        <li style={styles.emptyItem}>No deduction</li>
+                                        <li style={styles.emptyItem}>
+                                            {isFulltime ? 'No deductions' : 'No penalties'}
+                                        </li>
                                     )}
                                 </ul>
                             </div>
@@ -141,7 +172,7 @@ const PayslipDetailModal = ({ isOpen, onClose, record }) => {
     );
 };
 
-// --- Styles Object ---
+// --- Styles Object (Giữ nguyên y hệt bản cũ) ---
 const styles = {
     overlay: {
         position: 'fixed',
@@ -151,7 +182,7 @@ const styles = {
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000,
-        backdropFilter: 'blur(2px)', // Hiệu ứng mờ nền hiện đại
+        backdropFilter: 'blur(2px)',
     },
     content: {
         backgroundColor: '#fff',
@@ -193,16 +224,7 @@ const styles = {
         marginBottom: '8px',
         marginTop: 0,
     },
-    idBox: {
-        backgroundColor: '#f3f4f6',
-        padding: '6px 12px',
-        borderRadius: '6px',
-        fontSize: '13px',
-        color: '#555',
-        fontWeight: '600',
-    },
-
-    // --- STYLES MỚI CHO THÔNG TIN NHÂN VIÊN ---
+    
     employeeInfo: {
         marginBottom: '10px',
         display: 'flex',
@@ -212,7 +234,7 @@ const styles = {
     employeeName: {
         fontSize: '18px',
         fontWeight: '600',
-        color: '#853d21ff', // Màu xanh dương đậm hơn để làm nổi bật tên
+        color: '#853d21ff',
     },
     employeeId: {
         fontSize: '13px',
@@ -221,7 +243,6 @@ const styles = {
         backgroundColor: '#f3f4f6',
         borderRadius: '4px',
     },
-
 
     badgeFulltime: {
         backgroundColor: '#e3f2fd',
@@ -275,7 +296,7 @@ const styles = {
     netValue: {
         fontSize: '20px',
         fontWeight: '700',
-        color: '#772424ff', // Màu xanh điểm nhấn
+        color: '#772424ff',
     },
 
     divider: {
@@ -287,8 +308,8 @@ const styles = {
     // Detail Columns Styles
     detailGrid: {
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
         gap: '30px',
+        // gridTemplateColumns được set inline trong component
     },
     column: {
         display: 'flex',
@@ -317,8 +338,8 @@ const styles = {
     },
     itemName: { color: '#4b5563' },
     itemVal: { fontWeight: '600', color: '#1f2937' },
-    itemValSuccess: { fontWeight: '600', color: '#059669' }, // Green
-    itemValDanger: { fontWeight: '600', color: '#dc2626' },   // Red
+    itemValSuccess: { fontWeight: '600', color: '#059669' },
+    itemValDanger: { fontWeight: '600', color: '#dc2626' },
     emptyItem: { fontStyle: 'italic', color: '#9ca3af', marginTop: '10px', fontSize: '13px' },
 };
 

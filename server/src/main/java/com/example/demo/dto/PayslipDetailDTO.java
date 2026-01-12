@@ -18,10 +18,12 @@ public class PayslipDetailDTO {
     private Long payslipId;
     private Long payrollId;
     private Long employeeId;
-    
+
     // Đổi tên biến cho khớp với code Service (setFullName)
-    private String fullName; 
+    private String fullName;
     private String bankAccountNumber;
+
+    private BigDecimal baseSalary;
     
     // Thêm 2 trường này (dùng BigDecimal để khớp với Entity)
     private BigDecimal grossSalary;
@@ -30,5 +32,5 @@ public class PayslipDetailDTO {
     // Các list chi tiết
     private List<Map<String, Object>> allowances;
     private List<Map<String, Object>> bonuses;
-    private List<Map<String, Object>> deductions;
+    private List<Map<String, Object>> deductions; //deduction for fulltime, penalty for freelance
 }

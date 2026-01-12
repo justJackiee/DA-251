@@ -1,34 +1,4 @@
-# version: "3.9"
-
-# services:
-#   server:
-#     build:
-#       context: ./server
-#       dockerfile: Dockerfile
-#     ports:
-#       - "5000:5000"
-#     container_name: my_server
-#     restart: unless-stopped
-#     depends_on:
-#       - postgres
-#     environment:
-#       SPRING_DATASOURCE_URL: jdbc:postgresql://my_postgres:5432/postgres
-#       SPRING_DATASOURCE_USERNAME: postgres
-#       SPRING_DATASOURCE_PASSWORD: 123456
-
-#   postgres:
-#     image: postgres:15
-#     container_name: my_postgres
-#     restart: unless-stopped
-#     ports:
-#       - "5431:5432"
-#     environment:
-#       POSTGRES_USER: postgres
-#       POSTGRES_PASSWORD: 123456
-#       POSTGRES_DB: postgres
-#     volumes:
-#       - ./postgres_data:/var/lib/postgresql/data
-#       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
+version: "3.9"
 
 services:
   postgres:
@@ -40,9 +10,9 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: postgres
+      POSTGRES_DB: HRM
     volumes:
-      # Dùng named volume thay vì thư mục local để quản lý sạch sẽ hơn
+      # Use named volume for cleaner management
       - pgdata:/var/lib/postgresql/data
       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
 
@@ -59,8 +29,7 @@ services:
     depends_on:
       - postgres
     environment:
-      # Connect the server to the HRM database created by the init script
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/HRM
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/HRM?stringtype=unspecified
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
 volumes:

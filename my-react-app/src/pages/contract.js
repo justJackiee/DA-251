@@ -369,7 +369,13 @@ function Contract() {
                   render: (row) => `${Number(row.value || 0).toLocaleString()} VND`
                 },
                 { header: 'Committed Deadline', accessor: 'committed_deadline' },
-                { header: 'Status', accessor: 'status' }
+                { header: 'Status', render: (row) => (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      row.status === 'Active' ? 'bg-green-100 text-green-700' : (row.status === 'Expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')
+                    }`}>
+                      {row.status}
+                    </span>
+                  ) }
               ]}
             />
           )}

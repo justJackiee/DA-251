@@ -3,6 +3,10 @@ package com.example.demo.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.util.List;
+import com.example.demo.entity.subtable.FulltimeContractAllowance;
+import com.example.demo.entity.subtable.FulltimeContractBonus;
+import com.example.demo.entity.subtable.FulltimeContractDeduction;
 
 @Entity
 @Table(name = "fulltime_contract")
@@ -37,12 +41,15 @@ public class FulltimeContract {
     @Column(name = "document_path")
     private String documentPath;
 
-    @Column(name = "allowances_json", columnDefinition = "TEXT")
-    private String allowancesJson;
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "contract_id")
+    private List<FulltimeContractAllowance> allowances;
 
-    @Column(name = "bonuses_json", columnDefinition = "TEXT")
-    private String bonusesJson;
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "contract_id")
+    private List<FulltimeContractBonus> bonuses;
 
-    @Column(name = "deductions_json", columnDefinition = "TEXT")
-    private String deductionsJson;
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "contract_id")
+    private List<FulltimeContractDeduction> deductions;
 }

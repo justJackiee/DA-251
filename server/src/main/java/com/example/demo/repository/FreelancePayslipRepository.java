@@ -43,10 +43,6 @@ public interface FreelancePayslipRepository extends JpaRepository<FreelancePaysl
     """, nativeQuery = true)
     List<PayslipHistoryDTO> findLatest(@Param("empId") Long empId);
 
-    // Query Native vào SQL View để lấy dữ liệu chi tiết kèm JSON
-    @Query(value = "SELECT * FROM view_freelance_payslip_detail WHERE payslip_id = :id", nativeQuery = true)
-    Optional<FreelancePayslipView> findDetailView(@Param("id") Long id);
-
     // Hàm JPA chuẩn để tìm kiếm
     Optional<FreelancePayslip> findByPayrollIdAndEmployeeId(Long payrollId, Long employeeId);
 }

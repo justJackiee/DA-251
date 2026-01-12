@@ -1,6 +1,6 @@
-CREATE DATABASE "HRM";
+-- CREATE DATABASE "HRM";
 -- Make sure subsequent statements execute in the newly created HRM database
-\connect "HRM"
+-- \connect "HRM"
 -- Xóa các bảng cũ nếu tồn tại (để reset demo)
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
@@ -539,7 +539,7 @@ CREATE OR REPLACE PROCEDURE sp_generate_fulltime_payslip(
     p_employee_id INT,
     p_actual_work_days INT,
     p_ot_hours DECIMAL(15, 2),
-    -- JSON input structure: {"performance": 100, "cycle": 200, "holiday": 300, "other": 400}
+    -- JSON input structure: {"holiday": 300, "other": 400}
     p_manual_bonus JSONB DEFAULT '{}'::JSONB
 )
 LANGUAGE plpgsql
@@ -553,6 +553,9 @@ DECLARE
 
     v_payroll_status payroll_status_enum;
 
+    v_month INT; 
+    v_year INT;
+    
     -- Variables
     v_contract_id INT;
     v_base_salary DECIMAL(15, 2);
@@ -565,7 +568,8 @@ DECLARE
     
     -- Bonuses (Updated)
     v_performance_bonus DECIMAL(15, 2) := 0;
-    v_cycle_bonus DECIMAL(15, 2) := 0; -- Quý/Năm
+    v_quarter_bonus DECIMAL(15, 2) := 0;
+    v_year_bonus DECIMAL(15, 2) := 0;
     v_holiday_bonus DECIMAL(15, 2) := 0;
     v_other_bonus DECIMAL(15, 2) := 0;
     
@@ -588,9 +592,14 @@ DECLARE
     v_tax DECIMAL(15, 2) := 0;            
     v_net_income DECIMAL(15, 2); 
 
+	r_bonus RECORD;
+	v_calc_amount DECIMAL(15, 2) := 0;
+
 BEGIN
     -- [MỚI] 1. CHECK STATUS (LOCK MECHANISM)
-    SELECT status INTO v_payroll_status FROM payroll WHERE id = p_payroll_id;
+    SELECT status, month, year INTO v_payroll_status, v_month, v_year 
+    FROM payroll WHERE id = p_payroll_id;
+
     IF v_payroll_status = 'Paid' THEN
         RAISE EXCEPTION 'PAYROLL_LOCKED: Kỳ lương này đã được thanh toán (Paid). Không thể tính lại.';
     END IF;
@@ -617,11 +626,35 @@ BEGIN
 
     -- 4. PROCESS MANUAL BONUSES (UPDATED)
     IF p_manual_bonus IS NOT NULL THEN
-        v_performance_bonus := COALESCE((p_manual_bonus->>'performance')::DECIMAL, 0);
-        v_cycle_bonus := COALESCE((p_manual_bonus->>'cycle')::DECIMAL, 0);
         v_holiday_bonus := COALESCE((p_manual_bonus->>'holiday')::DECIMAL, 0);
-        v_other_bonus := COALESCE((p_manual_bonus->>'other')::DECIMAL, 0);
+        v_other_bonus   := COALESCE((p_manual_bonus->>'other')::DECIMAL, 0);
     END IF;
+
+    FOR r_bonus IN SELECT name, amount, rate FROM fulltime_contract_bonus WHERE contract_id = v_contract_id 
+    LOOP
+        -- Tính giá trị của bonus này (Amount cố định hoặc % theo lương cơ bản)
+        v_calc_amount := COALESCE(r_bonus.amount, v_base_salary * (r_bonus.rate / 100.0));
+
+        -- A. Performance Bonus (Tính hàng tháng)
+        IF r_bonus.name ILIKE '%Performance%' OR r_bonus.name ILIKE '%Hiệu suất%' THEN
+            v_performance_bonus := v_performance_bonus + v_calc_amount;
+        
+        -- B. Quarterly Bonus (Tháng 3, 6, 9, 12)
+        ELSIF r_bonus.name ILIKE '%Quarter%' OR r_bonus.name ILIKE '%Quý%' THEN
+            IF v_month IN (3, 6, 9, 12) THEN
+                v_quarter_bonus := v_quarter_bonus + v_calc_amount;
+            END IF;
+
+        -- C. Yearly Bonus (Tháng 12)
+        ELSIF r_bonus.name ILIKE '%Year%' OR r_bonus.name ILIKE '%Năm%' THEN
+            IF v_month = 12 THEN
+                v_year_bonus := v_year_bonus + v_calc_amount;
+            END IF;
+        END IF;
+    END LOOP;
+
+    -- Tổng Bonus
+    v_total_bonus := v_holiday_bonus + v_other_bonus + v_performance_bonus + v_quarter_bonus + v_year_bonus;
 
     -- 5. CALC OT & GROSS
     IF p_ot_hours > 0 AND v_ot_rate IS NOT NULL THEN
@@ -629,8 +662,6 @@ BEGIN
     END IF;
 
     v_total_taxed_allowance := v_responsibility_allowance + v_living_allowance;
-    v_total_bonus := v_performance_bonus + v_cycle_bonus + v_holiday_bonus + v_other_bonus;
-    
     v_contract_gross := v_base_salary + v_total_taxed_allowance;
     v_salary_by_workday := (v_contract_gross / WORK_DAYS_STANDARD) * p_actual_work_days;
     v_actual_gross_income := v_salary_by_workday + v_total_bonus + v_ot_amount + v_travel_allowance;
@@ -719,10 +750,11 @@ BEGIN
 
     INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES
     (v_payslip_id, 1, 'Performance Bonus', v_performance_bonus),
-    (v_payslip_id, 2, 'Cycle Bonus (Quarter/Year)', v_cycle_bonus),
-    (v_payslip_id, 3, 'Holiday Bonus', v_holiday_bonus),
-    (v_payslip_id, 4, 'Other Bonus', v_other_bonus),
-    (v_payslip_id, 5, 'Overtime Payment', v_ot_amount);
+    (v_payslip_id, 2, 'Quarterly Bonus', v_quarter_bonus),
+    (v_payslip_id, 3, 'Yearly Bonus', v_year_bonus),
+    (v_payslip_id, 4, 'Holiday Bonus', v_holiday_bonus),
+    (v_payslip_id, 5, 'Other Bonus', v_other_bonus),
+    (v_payslip_id, 6, 'Overtime Payment', v_ot_amount);
 
     INSERT INTO fulltime_payslip_deduction (payslip_id, stt, name, amount) VALUES
     (v_payslip_id, 1, 'Self Deduction', SELF_DEDUCTION),
@@ -745,6 +777,7 @@ SELECT
     e.bank_account_number,
     fp.gross_salary,
     fp.net_salary,
+    fc.base_salary,
     -- Gom nhóm Allowances thành JSON Text
     COALESCE(
         (
@@ -787,9 +820,18 @@ CREATE OR REPLACE PROCEDURE sp_generate_freelance_payslip(
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    -- Payroll info
     v_payroll_status payroll_status_enum;
+    v_payroll_month INT;
+    v_payroll_year INT;
+
+    -- Contract info
     v_contract_id INT;
-    v_contract_value DECIMAL(15, 2);
+    v_contract_full_value DECIMAL(15, 2);
+    v_contract_end_date DATE;
+    
+    -- Calculation vars
+    v_contract_payment DECIMAL(15, 2) := 0; -- Số tiền hợp đồng thực trả kỳ này
     v_payslip_id INT;
     
     v_total_bonus DECIMAL(15, 2) := 0;
@@ -802,16 +844,24 @@ DECLARE
     v_item_amount DECIMAL(15, 2);
     v_stt INT := 1;
 BEGIN
-    -- 1. Check Status Payroll
-    SELECT status INTO v_payroll_status FROM payroll WHERE id = p_payroll_id;
+    -- 1. Check Status Payroll & Get Period Info
+    SELECT status, month, year 
+    INTO v_payroll_status, v_payroll_month, v_payroll_year
+    FROM payroll 
+    WHERE id = p_payroll_id;
+
     IF v_payroll_status = 'Paid' THEN
         RAISE EXCEPTION 'PAYROLL_LOCKED: Kỳ lương đã thanh toán.';
     END IF;
 
-    -- 2. Get Active Contract & Value
-    -- Logic: Lấy hợp đồng mới nhất (hoặc đang active) của Freelancer
-    SELECT contract_id, value 
-    INTO v_contract_id, v_contract_value
+    IF v_payroll_status IS NULL THEN
+        RAISE EXCEPTION 'PAYROLL_NOT_FOUND: Không tìm thấy kỳ lương ID %', p_payroll_id;
+    END IF;
+
+    -- 2. Get Active Contract Info
+    -- Lấy hợp đồng active dựa trên end_date chưa qua hoặc mới nhất
+    SELECT contract_id, value, end_date
+    INTO v_contract_id, v_contract_full_value, v_contract_end_date
     FROM freelance_contract
     WHERE employee_id = p_employee_id
     ORDER BY start_date DESC LIMIT 1;
@@ -821,58 +871,72 @@ BEGIN
         RETURN;
     END IF;
 
-    -- 3. Calculate Bonuses
+    -- =================================================================================
+    -- [LOGIC MỚI] 3. Kiểm tra xem kỳ lương này có phải tháng kết thúc hợp đồng không?
+    -- =================================================================================
+    IF (EXTRACT(MONTH FROM v_contract_end_date) = v_payroll_month AND 
+        EXTRACT(YEAR FROM v_contract_end_date) = v_payroll_year) THEN
+        
+        v_contract_payment := v_contract_full_value;
+        RAISE NOTICE 'CONTRACT MATURITY: Kỳ lương trùng tháng kết thúc hợp đồng. Thanh toán full: %', v_contract_payment;
+    ELSE
+        v_contract_payment := 0;
+        RAISE NOTICE 'INTERIM PERIOD: Chưa đến tháng kết thúc hợp đồng (%-%). Chỉ tính Bonus/Penalty nếu có.', EXTRACT(MONTH FROM v_contract_end_date), EXTRACT(YEAR FROM v_contract_end_date);
+    END IF;
+
+    -- 4. Calculate Bonuses (Vẫn tính nếu có yêu cầu, bất kể tháng nào)
     FOR r_bonus IN SELECT name, amount, rate FROM freelance_contract_bonus WHERE contract_id = v_contract_id LOOP
         IF (p_adjustments->'bonuses') ? r_bonus.name THEN
-            v_item_amount := COALESCE(r_bonus.amount, v_contract_value * (r_bonus.rate / 100.0));
+            v_item_amount := COALESCE(r_bonus.amount, v_contract_full_value * (r_bonus.rate / 100.0));
             v_total_bonus := v_total_bonus + v_item_amount;
         END IF;
     END LOOP;
 
-    -- 4. Calculate Penalties
+    -- 5. Calculate Penalties
     FOR r_penalty IN SELECT name, amount, rate FROM freelance_contract_penalty WHERE contract_id = v_contract_id LOOP
         IF (p_adjustments->'penalties') ? r_penalty.name THEN
-            v_item_amount := COALESCE(r_penalty.amount, v_contract_value * (r_penalty.rate / 100.0));
+            v_item_amount := COALESCE(r_penalty.amount, v_contract_full_value * (r_penalty.rate / 100.0));
             v_total_penalty := v_total_penalty + v_item_amount;
         END IF;
     END LOOP;
 
-    -- 5. Final Calculation
-    v_final_amount := v_contract_value + v_total_bonus - v_total_penalty;
+    -- 6. Final Calculation
+    -- Final = (0 hoặc Full Value) + Bonus - Penalty
+    v_final_amount := v_contract_payment + v_total_bonus - v_total_penalty;
 
-    -- 6. Cleanup Old Data (Để support tính lại - Re-calculate)
+    -- 7. Cleanup Old Data (Re-calculate support)
     DELETE FROM freelance_actual_bonus WHERE payslip_id IN (SELECT payslip_id FROM freelance_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
     DELETE FROM freelance_actual_penalty WHERE payslip_id IN (SELECT payslip_id FROM freelance_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
     DELETE FROM freelance_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id;
 
-    -- 7. Insert Header
+    -- 8. Insert Header
     INSERT INTO freelance_payslip (payroll_id, employee_id, contract_id, final_amount)
     VALUES (p_payroll_id, p_employee_id, v_contract_id, v_final_amount)
     RETURNING payslip_id INTO v_payslip_id;
 
-    -- 8. Insert Details (Bonus)
+    -- 9. Insert Details (Bonus)
     v_stt := 1;
     FOR r_bonus IN SELECT name, amount, rate FROM freelance_contract_bonus WHERE contract_id = v_contract_id LOOP
         IF (p_adjustments->'bonuses') ? r_bonus.name THEN
-            v_item_amount := COALESCE(r_bonus.amount, v_contract_value * (r_bonus.rate / 100.0));
+            v_item_amount := COALESCE(r_bonus.amount, v_contract_full_value * (r_bonus.rate / 100.0));
             INSERT INTO freelance_actual_bonus (payslip_id, stt, name, amount) 
             VALUES (v_payslip_id, v_stt, r_bonus.name, v_item_amount);
             v_stt := v_stt + 1;
         END IF;
     END LOOP;
 
-    -- 9. Insert Details (Penalty)
+    -- 10. Insert Details (Penalty)
     v_stt := 1;
     FOR r_penalty IN SELECT name, amount, rate FROM freelance_contract_penalty WHERE contract_id = v_contract_id LOOP
         IF (p_adjustments->'penalties') ? r_penalty.name THEN
-            v_item_amount := COALESCE(r_penalty.amount, v_contract_value * (r_penalty.rate / 100.0));
+            v_item_amount := COALESCE(r_penalty.amount, v_contract_full_value * (r_penalty.rate / 100.0));
             INSERT INTO freelance_actual_penalty (payslip_id, stt, name, amount) 
             VALUES (v_payslip_id, v_stt, r_penalty.name, v_item_amount);
             v_stt := v_stt + 1;
         END IF;
     END LOOP;
 
-    RAISE NOTICE 'SUCCESS: Generated Freelance Payslip ID %. Total Amount: %', v_payslip_id, to_char(v_final_amount, 'FM999,999,999,999');
+    RAISE NOTICE 'SUCCESS: Generated Freelance Payslip ID %. Contract Pay: %, Total: %', v_payslip_id, to_char(v_contract_payment, 'FM999,999,999,999'), to_char(v_final_amount, 'FM999,999,999,999');
 END;
 $$;
 

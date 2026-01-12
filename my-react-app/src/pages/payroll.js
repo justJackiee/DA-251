@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { PayrollService } from '../services/payrollService';
 import PayslipDetailModal from '../components/PayslipDetailModal';
-import { FiDollarSign, FiUsers, FiEye } from 'react-icons/fi';
+import PayslipCalculationModal from '../components/PayslipCalculationModal';
+import { FiDollarSign, FiUsers, FiEye, FiEdit } from 'react-icons/fi';
 import { IoFlag } from "react-icons/io5";
 import { GrMoney } from "react-icons/gr";
 
 const PayrollPage = () => {
     // State quản lý dữ liệu
-    const [month, setMonth] = useState(11);
-    const [year, setYear] = useState(2025);
+    const today = new Date();
+    
+    const [month, setMonth] = useState(today.getMonth() + 1);
+    const [year, setYear] = useState(today.getFullYear());
     const [payrollList, setPayrollList] = useState([]);
     const [stats, setStats] = useState({
         totalNet: 0, totalGross: 0, paidEmployees: 0, totalEmployees: 0, pendingCount: 0, failedCount: 0
     });
     const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
 
     // State Modal
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // State for Calculation Modal (Freelance)
+    const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
+    const [calcRecord, setCalcRecord] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -36,17 +44,26 @@ const PayrollPage = () => {
         if (window.confirm("Tính toán lại lương cho tháng này?")) {
             setLoading(true);
             try {
-                await PayrollService.generatePayroll(month, year);
+                await PayrollService.calculateAll(month, year);
                 fetchData();
             } catch (e) { alert("Lỗi: " + e); }
             finally { setLoading(false); }
         }
     };
 
+    const getEndOfMonthDate = () => {
+        // new Date(year, month, 0) sẽ trả về ngày cuối cùng của tháng đó
+        // (Vì trong JS Date constructor: tháng chạy 0-11, nhưng tham số 'day' là 0 sẽ lùi về ngày cuối tháng trước.
+        // Tuy nhiên logic của chúng ta: month state là 1-12. Ví dụ chọn tháng 11.
+        // new Date(2025, 11, 0) -> Ngày 0 của tháng 12 (tức 30/11)
+        const lastDay = new Date(year, month, 0);
+        return lastDay.toLocaleDateString('vi-VN');
+    };
+
     const handleLock = async () => {
         if (stats.status === 'Paid') return;
-        if (payrollList.length === 0) {
-            alert("Không có dữ liệu.");
+        if (payrollList.length === 0 || !payrollList[0].payrollId) {
+            alert("Không tìm thấy kỳ lương để chốt.");
             return;
         }
 
@@ -58,7 +75,12 @@ const PayrollPage = () => {
             try {
                 await PayrollService.lockPayroll(payrollId);
                 fetchData(); // Load lại để update status -> Paid
-            } catch (e) { alert("Lỗi: " + e); }
+            } catch (e) {
+                console.error(e);
+                // Ưu tiên hiển thị message từ backend trả về
+                const errorMsg = e.message || (e.response && e.response.data && e.response.data.message) || JSON.stringify(e);
+                alert("Lỗi: " + errorMsg);
+            }
             finally { setLoading(false); }
         }
     };
@@ -76,6 +98,12 @@ const PayrollPage = () => {
         }).format(val);
     };
 
+
+    const filteredList = payrollList.filter(item =>
+        item.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.role?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div style={styles.container}>
@@ -135,15 +163,15 @@ const PayrollPage = () => {
             {/* Controls Section */}
             <div style={styles.controlsBar}>
                 <div style={styles.controlGroup}>
-                    <select
-                        style={styles.selectInput}
+                    <input
+                        type="number"
+                        style={styles.yearInput}
                         value={month}
                         onChange={e => setMonth(e.target.value)}
-                    >
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                            <option key={m} value={m}>Tháng {m}</option>
-                        ))}
-                    </select>
+                        placeholder="Month"
+                        min="1"
+                        max="12"
+                    />
                     <input
                         type="number"
                         style={styles.yearInput}
@@ -153,7 +181,13 @@ const PayrollPage = () => {
                 </div>
 
                 <div style={styles.controlGroup}>
-                    <input type="text" placeholder="Search Payroll Record..." style={styles.searchInput} />
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        style={styles.searchInput}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
 
                     {/* Nút Calculate: Disable nếu đã Paid */}
                     <button
@@ -196,14 +230,15 @@ const PayrollPage = () => {
                             <th style={styles.th}>Gross Pay</th>
                             <th style={styles.th}>Net Pay</th>
                             <th style={styles.th}>Status</th>
-                            <th style={styles.th}>Payment Date</th>
+                            <th style={styles.th}>Created Date</th>
+                            <th style={styles.th}>Edit</th>
                             <th style={styles.th}>Detail</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="8" style={styles.loadingCell}>Loading data...</td></tr>
-                        ) : payrollList.map((row, index) => (
+                            <tr><td colSpan="9" style={styles.loadingCell}>Loading data...</td></tr>
+                        ) : filteredList.map((row, index) => (
                             <tr key={index} style={styles.tableRow}>
                                 <td style={styles.td}>
                                     <div style={styles.nameCell}>
@@ -220,11 +255,22 @@ const PayrollPage = () => {
                                         {row.status === 'Paid' ? '✓ Paid' : row.status === 'Unpaid' ? '⚑ Pending' : '✕ Failed'}
                                     </span>
                                 </td>
-                                <td style={styles.td}>{row.paymentDate ? new Date(row.paymentDate).toLocaleDateString() : '-'}</td>
+                                <td style={styles.td}>
+                                    {row.payslipId ? getEndOfMonthDate() : '-'}
+                                </td>
                                 <td style={styles.tdAction}>
-                                    <button style={styles.btnIcon} onClick={() => { setSelectedRecord(row); setIsModalOpen(true); }}>
-                                        <FiEye size={16} />
-                                    </button>
+                                    {row.status !== 'Paid' && (
+                                        <button style={styles.btnCalc} onClick={() => { setCalcRecord(row); setIsCalcModalOpen(true); }} title="Edit/Calculate">
+                                            <FiEdit size={16} />
+                                        </button>
+                                    )}
+                                </td>
+                                <td style={styles.tdAction}>
+                                    {row.payslipId && (
+                                        <button style={styles.btnIcon} onClick={() => { setSelectedRecord(row); setIsModalOpen(true); }}>
+                                            <FiEye size={16} />
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -236,6 +282,15 @@ const PayrollPage = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 record={selectedRecord}
+            />
+
+            <PayslipCalculationModal
+                isOpen={isCalcModalOpen}
+                onClose={() => setIsCalcModalOpen(false)}
+                record={calcRecord}
+                onSuccess={fetchData}
+                month={month}
+                year={year}
             />
         </div>
     );
@@ -487,6 +542,16 @@ const styles = {
         cursor: 'pointer',
         color: '#9ca3af',
         fontSize: '16px',
+    },
+    btnCalc: {
+        border: 'none',
+        background: '#e0f2fe',
+        cursor: 'pointer',
+        color: '#0369a1',
+        fontSize: '16px',
+        padding: '6px 8px',
+        borderRadius: '4px',
+        marginRight: '8px',
     },
     loadingCell: { textAlign: 'center', padding: '20px', color: '#6b7280' }
 };

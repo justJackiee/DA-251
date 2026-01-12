@@ -22,7 +22,9 @@ services:
       dockerfile: Dockerfile
     container_name: my_server
     ports:
-      - "5000:5000" # Map host 5000 -> container 5000
+      # Backend inside the container listens on port 9000 (see server logs)
+      # Map host 5000 -> container 9000 so frontend can continue using http://localhost:5000
+      - "5000:9000"
     restart: unless-stopped
     depends_on:
       - postgres
@@ -30,6 +32,5 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/HRM?stringtype=unspecified
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123456
-
 volumes:
   pgdata:

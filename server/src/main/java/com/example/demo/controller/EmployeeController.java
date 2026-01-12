@@ -13,6 +13,12 @@ import com.example.demo.repository.FulltimeContractRepository;
 import com.example.demo.repository.FreelanceContractRepository;
 import com.example.demo.repository.FulltimePayslipRepository;
 import com.example.demo.repository.FreelancePayslipRepository;
+import com.example.demo.repository.FulltimeContractAllowanceRepository;
+import com.example.demo.repository.FulltimeContractBonusRepository;
+import com.example.demo.repository.FulltimeContractDeductionRepository;
+import com.example.demo.entity.subtable.FulltimeContractAllowance;
+import com.example.demo.entity.subtable.FulltimeContractBonus;
+import com.example.demo.entity.subtable.FulltimeContractDeduction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,6 +51,12 @@ public class EmployeeController {
     private EmployeeRepository employeeRepository;
     @Autowired
     private FulltimeContractRepository fulltimeContractRepository;
+    @Autowired
+    private FulltimeContractAllowanceRepository fulltimeContractAllowanceRepository;
+    @Autowired
+    private FulltimeContractBonusRepository fulltimeContractBonusRepository;
+    @Autowired
+    private FulltimeContractDeductionRepository fulltimeContractDeductionRepository;
     @Autowired
     private FreelanceContractRepository freelanceContractRepository;
 
@@ -265,7 +277,53 @@ public class EmployeeController {
                 contract.setOtRate(request.getContract().getOtRate());
                 contract.setAnnualLeaveDays(request.getContract().getAnnualLeaveDays());
                 contract.setType(request.getContract().getContractType()); 
-                fulltimeContractRepository.save(contract);
+                FulltimeContract savedContract = fulltimeContractRepository.save(contract);
+                // Persist optional sub-components if provided in creation request
+                if (request.getContract().getAllowances() != null) {
+                    int stt = 1;
+                    for (var a : request.getContract().getAllowances()) {
+                        FulltimeContractAllowance fa = new FulltimeContractAllowance();
+                        fa.setContractId(savedContract.getContractId());
+                        fa.setStt(stt++);
+                        fa.setName(a.getName());
+                        try {
+                            fa.setAmount(new java.math.BigDecimal(String.valueOf(a.getAmount())));
+                        } catch (Exception ex) {
+                            fa.setAmount(null);
+                        }
+                        fulltimeContractAllowanceRepository.save(fa);
+                    }
+                }
+                if (request.getContract().getBonuses() != null) {
+                    int stt = 1;
+                    for (var b : request.getContract().getBonuses()) {
+                        FulltimeContractBonus fb = new FulltimeContractBonus();
+                        fb.setContractId(savedContract.getContractId());
+                        fb.setStt(stt++);
+                        fb.setName(b.getName());
+                        try {
+                            fb.setAmount(new java.math.BigDecimal(String.valueOf(b.getAmount())));
+                        } catch (Exception ex) {
+                            fb.setAmount(null);
+                        }
+                        fulltimeContractBonusRepository.save(fb);
+                    }
+                }
+                if (request.getContract().getDeductions() != null) {
+                    int stt = 1;
+                    for (var d : request.getContract().getDeductions()) {
+                        FulltimeContractDeduction fd = new FulltimeContractDeduction();
+                        fd.setContractId(savedContract.getContractId());
+                        fd.setStt(stt++);
+                        fd.setName(d.getName());
+                        try {
+                            fd.setAmount(new java.math.BigDecimal(String.valueOf(d.getAmount())));
+                        } catch (Exception ex) {
+                            fd.setAmount(null);
+                        }
+                        fulltimeContractDeductionRepository.save(fd);
+                    }
+                }
 
             } else if ("Freelance".equalsIgnoreCase(request.getType())) {
                 if (request.getContract() == null) {
@@ -351,7 +409,59 @@ public class EmployeeController {
                 Integer al = parseIntegerSafe(contract.get("annualLeaveDays"));
                 if (al != null) fc.setAnnualLeaveDays(al);
                 if (contract.get("contractType") != null) fc.setType(String.valueOf(contract.get("contractType")));
-                fulltimeContractRepository.save(fc);
+                FulltimeContract savedFc = fulltimeContractRepository.save(fc);
+                // Save allowances/bonuses/deductions if present in payload
+                try {
+                    Object rawAllowances = contract.get("allowances");
+                    if (rawAllowances instanceof java.util.List) {
+                        int stt = 1;
+                        for (Object o : (java.util.List) rawAllowances) {
+                            if (o instanceof java.util.Map) {
+                                java.util.Map m = (java.util.Map) o;
+                                FulltimeContractAllowance fa = new FulltimeContractAllowance();
+                                fa.setContractId(savedFc.getContractId());
+                                fa.setStt(stt++);
+                                fa.setName(m.getOrDefault("name", "").toString());
+                                try { fa.setAmount(new java.math.BigDecimal(String.valueOf(m.getOrDefault("amount", null)))); } catch (Exception ex) { fa.setAmount(null); }
+                                fulltimeContractAllowanceRepository.save(fa);
+                            }
+                        }
+                    }
+                } catch (Exception ex) { /* ignore non-critical subcomponent errors */ }
+                try {
+                    Object rawBonuses = contract.get("bonuses");
+                    if (rawBonuses instanceof java.util.List) {
+                        int stt = 1;
+                        for (Object o : (java.util.List) rawBonuses) {
+                            if (o instanceof java.util.Map) {
+                                java.util.Map m = (java.util.Map) o;
+                                FulltimeContractBonus fb = new FulltimeContractBonus();
+                                fb.setContractId(savedFc.getContractId());
+                                fb.setStt(stt++);
+                                fb.setName(m.getOrDefault("name", "").toString());
+                                try { fb.setAmount(new java.math.BigDecimal(String.valueOf(m.getOrDefault("amount", null)))); } catch (Exception ex) { fb.setAmount(null); }
+                                fulltimeContractBonusRepository.save(fb);
+                            }
+                        }
+                    }
+                } catch (Exception ex) { }
+                try {
+                    Object rawDeductions = contract.get("deductions");
+                    if (rawDeductions instanceof java.util.List) {
+                        int stt = 1;
+                        for (Object o : (java.util.List) rawDeductions) {
+                            if (o instanceof java.util.Map) {
+                                java.util.Map m = (java.util.Map) o;
+                                FulltimeContractDeduction fd = new FulltimeContractDeduction();
+                                fd.setContractId(savedFc.getContractId());
+                                fd.setStt(stt++);
+                                fd.setName(m.getOrDefault("name", "").toString());
+                                try { fd.setAmount(new java.math.BigDecimal(String.valueOf(m.getOrDefault("amount", null)))); } catch (Exception ex) { fd.setAmount(null); }
+                                fulltimeContractDeductionRepository.save(fd);
+                            }
+                        }
+                    }
+                } catch (Exception ex) { }
             } else if (payloadLooksLikeFreelance) {
                 FreelanceContract fl = new FreelanceContract();
                 fl.setEmployeeId(id);

@@ -181,13 +181,7 @@ const PayrollPage = () => {
                 </div>
 
                 <div style={styles.controlGroup}>
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        style={styles.searchInput}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                    <input type="text" placeholder="Search Payroll Record..." style={styles.searchInput} />
 
                     {/* Nút Calculate: Disable nếu đã Paid */}
                     <button

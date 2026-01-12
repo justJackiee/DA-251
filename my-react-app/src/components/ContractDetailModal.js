@@ -17,8 +17,14 @@ export default function ContractDetailModal({ contract, onClose }) {
       setLoading(true);
       setError(null);
       const contractId = contract.contractId || contract.contract_id;
-      console.log("Fetching contract details for ID:", contractId);
-      const details = await contractService.getContractDetails(contractId);
+
+      // Detect if this is a freelance contract (has value field, no base_salary)
+      const isFreelance = contract.value !== undefined ||
+        contract.committed_deadline !== undefined ||
+        (contract.base_salary === undefined && contract.baseSalary === undefined);
+
+      console.log("Fetching contract details for ID:", contractId, "isFreelance:", isFreelance);
+      const details = await contractService.getContractDetails(contractId, isFreelance);
 
       // Merge the original table contract (which may contain employee_name, display-friendly fields)
       // with the API details (which contain allowances/bonuses/deductions). Prefer the API values
@@ -128,9 +134,8 @@ export default function ContractDetailModal({ contract, onClose }) {
                 <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-gray-200">Status</h3>
                 <div className="text-base">
                   {contract.status ? (
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      contract.status === 'Active' ? 'bg-green-100 text-green-700' : (contract.status === 'Expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')
-                    }`}>{contract.status}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${contract.status === 'Active' ? 'bg-green-100 text-green-700' : (contract.status === 'Expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')
+                      }`}>{contract.status}</span>
                   ) : (
                     <span className="text-gray-400">N/A</span>
                   )}
@@ -268,9 +273,8 @@ export default function ContractDetailModal({ contract, onClose }) {
                 <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-gray-200">Status</h3>
                 <div className="text-base">
                   {contractData.status ? (
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      contractData.status === 'Active' ? 'bg-green-100 text-green-700' : (contractData.status === 'Expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')
-                    }`}>{contractData.status}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${contractData.status === 'Active' ? 'bg-green-100 text-green-700' : (contractData.status === 'Expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')
+                      }`}>{contractData.status}</span>
                   ) : (
                     <span className="text-gray-400">N/A</span>
                   )}

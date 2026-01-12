@@ -30,4 +30,10 @@ public class FreelanceContract {
 
     @Column(name = "document_path")
     private String documentPath;
+
+    @Column(name = "bonuses_json", columnDefinition = "TEXT")
+    private String bonusesJson;
+
+    @Column(name = "penalties_json", columnDefinition = "TEXT")
+    private String penaltiesJson;
 }

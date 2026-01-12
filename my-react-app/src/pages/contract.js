@@ -86,7 +86,28 @@ function Contract() {
           };
         });
 
-        setFullTimeData(formattedFullTime || []);
+        // Try to parse JSON fields from backend (allowances/bonuses/deductions)
+        const parseListField = (v) => {
+          if (!v) return [];
+          try {
+            if (typeof v === 'string') return JSON.parse(v);
+            if (Array.isArray(v)) return v;
+            return [];
+          } catch (e) { return [] }
+        };
+
+        // Attach parsed lists if backend provided JSON fields
+        const formattedFullTimeWithLists = formattedFullTime.map((f, idx) => {
+          const src = rawFullTime[idx] || {};
+          return {
+            ...f,
+            allowances: parseListField(src.allowancesJson || src.allowances || src.allowances_json),
+            bonuses: parseListField(src.bonusesJson || src.bonuses || src.bonuses_json),
+            deductions: parseListField(src.deductionsJson || src.deductions || src.deductions_json)
+          };
+        });
+
+        setFullTimeData(formattedFullTimeWithLists || []);
         setLoading(false);
       } catch (err) {
         console.error("Failed to load fulltime contract data:", err);
@@ -147,7 +168,22 @@ function Contract() {
           };
         });
 
-        setFreelanceData(formattedFreelance || []);
+        // Attach lists for freelance (bonuses, penalties -> map to bonuses/deductions)
+        const formattedFreelanceWithLists = formattedFreelance.map((f, idx) => {
+          const src = rawFreelance[idx] || {};
+          const parse = (v) => {
+            if (!v) return [];
+            try { if (typeof v === 'string') return JSON.parse(v); if (Array.isArray(v)) return v; } catch(e) {}
+            return [];
+          };
+          return {
+            ...f,
+            bonuses: parse(src.bonusesJson || src.bonuses || src.bonuses_json),
+            deductions: parse(src.penaltiesJson || src.penalties || src.penalties_json) // map penalties -> deductions
+          };
+        });
+
+        setFreelanceData(formattedFreelanceWithLists || []);
       } catch (err) {
         console.error("Failed to load freelance contract data:", err);
       }
@@ -185,7 +221,63 @@ function Contract() {
     return <div className="p-10 text-center">Đang tải hợp đồng...</div>;
 
   const handleViewContract = (contract) => {
-    setSelectedContract(contract);
+    const attachPayslip = async () => {
+      try {
+        // Get payroll dashboard (contains payslipId and payrollId)
+        const res = await axios.get('/api/payroll');
+        const list = Array.isArray(res.data) ? res.data : [];
+
+        const empId = contract.employee_id || contract.employeeId || contract.employeeIdValue;
+
+        if (contract.base_salary !== undefined) {
+          // Fulltime: try to find matching FULLTIME payslip in dashboard
+          const match = list.find(i => (i.employeeId == empId) && (i.contractType === 'FULLTIME') && i.payslipId);
+          let payrollId = null;
+          if (match && match.payrollId) payrollId = match.payrollId;
+          else {
+            // fallback: use latest payrollId from list
+            const ids = list.map(i => i.payrollId).filter(Boolean);
+            payrollId = ids.length ? Math.max(...ids) : null;
+          }
+
+          if (payrollId) {
+            try {
+              const detail = (await axios.get(`/api/payroll/${payrollId}/employee/${empId}`)).data || {};
+              contract.allowances = detail.allowances || [];
+              contract.bonuses = detail.bonuses || [];
+              contract.deductions = detail.deductions || [];
+            } catch (err) {
+              console.error('Failed to load fulltime payslip detail', err);
+              contract.allowances = contract.allowances || [];
+              contract.bonuses = contract.bonuses || [];
+              contract.deductions = contract.deductions || [];
+            }
+          }
+        } else {
+          // Freelance: try to find matching FREELANCE payslip in dashboard and use payslipId
+          const match = list.find(i => (i.employeeId == empId) && (i.contractType === 'FREELANCE') && i.payslipId);
+          if (match && match.payslipId) {
+            try {
+              const detail = (await axios.get(`/api/payroll/freelance/${match.payslipId}`)).data || {};
+              contract.allowances = detail.allowances || [];
+              contract.bonuses = detail.bonuses || [];
+              contract.deductions = detail.deductions || [];
+            } catch (err) {
+              console.error('Failed to load freelance payslip detail', err);
+              contract.allowances = contract.allowances || [];
+              contract.bonuses = contract.bonuses || [];
+              contract.deductions = contract.deductions || [];
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch payroll dashboard', err);
+      } finally {
+        setSelectedContract({ ...contract });
+      }
+    };
+
+    attachPayslip();
   };
 
   return (

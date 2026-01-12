@@ -36,4 +36,13 @@ public class FulltimeContract {
 
     @Column(name = "document_path")
     private String documentPath;
+
+    @Column(name = "allowances_json", columnDefinition = "TEXT")
+    private String allowancesJson;
+
+    @Column(name = "bonuses_json", columnDefinition = "TEXT")
+    private String bonusesJson;
+
+    @Column(name = "deductions_json", columnDefinition = "TEXT")
+    private String deductionsJson;
 }

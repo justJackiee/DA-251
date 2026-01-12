@@ -78,6 +78,61 @@ export default function ContractDetailModal({ contract, onClose }) {
                 </div>
               </div>
 
+              {/* Allowances / Bonuses / Deductions for Freelance if available */}
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-gray-200">Allowances</h3>
+                <div className="text-gray-600">
+                  {contract.allowances && contract.allowances.length > 0 ? (
+                    <div className="space-y-2">
+                      {contract.allowances.map((a, i) => (
+                        <div key={i} className="flex justify-between py-1 border-b border-gray-200">
+                          <span className="text-gray-700 text-sm">{a.name}</span>
+                          <span className="text-gray-900 font-medium text-sm">{a.amount}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No items added.</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-gray-200">Bonuses</h3>
+                <div className="text-gray-600">
+                  {contract.bonuses && contract.bonuses.length > 0 ? (
+                    <div className="space-y-2">
+                      {contract.bonuses.map((b, i) => (
+                        <div key={i} className="flex justify-between py-1 border-b border-gray-200">
+                          <span className="text-gray-700 text-sm">{b.name}</span>
+                          <span className="text-gray-900 font-medium text-sm">{b.amount}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No items added.</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-gray-200">Deductions</h3>
+                <div className="text-gray-600">
+                  {contract.deductions && contract.deductions.length > 0 ? (
+                    <div className="space-y-2">
+                      {contract.deductions.map((d, i) => (
+                        <div key={i} className="flex justify-between py-1 border-b border-gray-200">
+                          <span className="text-gray-700 text-sm">{d.name}</span>
+                          <span className="text-gray-900 font-medium text-sm">{d.amount}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No items added.</p>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-gray-200">Contract Document</h3>
                 <div className="text-gray-600">

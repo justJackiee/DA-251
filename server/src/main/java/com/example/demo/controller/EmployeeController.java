@@ -265,6 +265,17 @@ public class EmployeeController {
                 contract.setOtRate(request.getContract().getOtRate());
                 contract.setAnnualLeaveDays(request.getContract().getAnnualLeaveDays());
                 contract.setType(request.getContract().getContractType()); 
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    if (request.getContract().getAllowances() != null)
+                        contract.setAllowancesJson(mapper.writeValueAsString(request.getContract().getAllowances()));
+                    if (request.getContract().getBonuses() != null)
+                        contract.setBonusesJson(mapper.writeValueAsString(request.getContract().getBonuses()));
+                    if (request.getContract().getDeductions() != null)
+                        contract.setDeductionsJson(mapper.writeValueAsString(request.getContract().getDeductions()));
+                } catch (Exception ex) {
+                    System.out.println("Failed to serialize contract lists: " + ex.getMessage());
+                }
                 fulltimeContractRepository.save(contract);
 
             } else if ("Freelance".equalsIgnoreCase(request.getType())) {
@@ -287,6 +298,15 @@ public class EmployeeController {
                 contract.setEndDate(request.getContract().getEndDate());
                 contract.setValue(request.getContract().getContractValue());
                 contract.setCommittedDeadline(request.getContract().getCommittedDeadline());
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    if (request.getContract().getBonuses() != null)
+                        contract.setBonusesJson(mapper.writeValueAsString(request.getContract().getBonuses()));
+                    if (request.getContract().getPenalties() != null)
+                        contract.setPenaltiesJson(mapper.writeValueAsString(request.getContract().getPenalties()));
+                } catch (Exception ex) {
+                    System.out.println("Failed to serialize freelance contract lists: " + ex.getMessage());
+                }
                 
                 freelanceContractRepository.save(contract);
             }
@@ -351,6 +371,15 @@ public class EmployeeController {
                 Integer al = parseIntegerSafe(contract.get("annualLeaveDays"));
                 if (al != null) fc.setAnnualLeaveDays(al);
                 if (contract.get("contractType") != null) fc.setType(String.valueOf(contract.get("contractType")));
+                // persist optional lists as JSON if present
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    if (contract.get("allowances") != null) fc.setAllowancesJson(mapper.writeValueAsString(contract.get("allowances")));
+                    if (contract.get("bonuses") != null) fc.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                    if (contract.get("deductions") != null) fc.setDeductionsJson(mapper.writeValueAsString(contract.get("deductions")));
+                } catch (Exception ex) {
+                    System.out.println("Failed to serialize lists for addContract: " + ex.getMessage());
+                }
                 fulltimeContractRepository.save(fc);
             } else if (payloadLooksLikeFreelance) {
                 FreelanceContract fl = new FreelanceContract();
@@ -379,6 +408,13 @@ public class EmployeeController {
                     LocalDate d = parseDateSafe(contract.get("committedDeadline"));
                     if (d != null) fl.setCommittedDeadline(d);
                 }
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    if (contract.get("bonuses") != null) fl.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                    if (contract.get("penalties") != null) fl.setPenaltiesJson(mapper.writeValueAsString(contract.get("penalties")));
+                } catch (Exception ex) {
+                    System.out.println("Failed to serialize freelance lists for addContract: " + ex.getMessage());
+                }
                 freelanceContractRepository.save(fl);
             } else {
                 // Fallback: if payload is ambiguous, use employee.type to decide
@@ -406,6 +442,14 @@ public class EmployeeController {
                     Integer al = parseIntegerSafe(contract.get("annualLeaveDays"));
                     if (al != null) fc.setAnnualLeaveDays(al);
                     if (contract.get("contractType") != null) fc.setType(String.valueOf(contract.get("contractType")));
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        if (contract.get("allowances") != null) fc.setAllowancesJson(mapper.writeValueAsString(contract.get("allowances")));
+                        if (contract.get("bonuses") != null) fc.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                        if (contract.get("deductions") != null) fc.setDeductionsJson(mapper.writeValueAsString(contract.get("deductions")));
+                    } catch (Exception ex) {
+                        System.out.println("Failed to serialize lists for addContract (ambiguous branch): " + ex.getMessage());
+                    }
                     fulltimeContractRepository.save(fc);
                 } else {
                     FreelanceContract fl = new FreelanceContract();
@@ -432,6 +476,13 @@ public class EmployeeController {
                     if (contract.get("committedDeadline") != null) {
                         LocalDate d = parseDateSafe(contract.get("committedDeadline"));
                         if (d != null) fl.setCommittedDeadline(d);
+                    }
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        if (contract.get("bonuses") != null) fl.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                        if (contract.get("penalties") != null) fl.setPenaltiesJson(mapper.writeValueAsString(contract.get("penalties")));
+                    } catch (Exception ex) {
+                        System.out.println("Failed to serialize freelance lists for addContract (ambiguous branch): " + ex.getMessage());
                     }
                     freelanceContractRepository.save(fl);
                 }
@@ -510,6 +561,13 @@ public class EmployeeController {
                 if (al != null) fc.setAnnualLeaveDays(al);
                 if (contract.get("contractType") != null) fc.setType(String.valueOf(contract.get("contractType")));
                 if (storedPath != null) fc.setDocumentPath(storedPath);
+                try {
+                    if (contract.get("allowances") != null) fc.setAllowancesJson(mapper.writeValueAsString(contract.get("allowances")));
+                    if (contract.get("bonuses") != null) fc.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                    if (contract.get("deductions") != null) fc.setDeductionsJson(mapper.writeValueAsString(contract.get("deductions")));
+                } catch (Exception ex) {
+                    System.out.println("Failed to serialize lists for addContractWithFile (fulltime): " + ex.getMessage());
+                }
                 fulltimeContractRepository.save(fc);
             } else if (payloadLooksLikeFreelance) {
                 FreelanceContract fl = new FreelanceContract();
@@ -538,6 +596,12 @@ public class EmployeeController {
                     if (d != null) fl.setCommittedDeadline(d);
                 }
                 if (storedPath != null) fl.setDocumentPath(storedPath);
+                try {
+                    if (contract.get("bonuses") != null) fl.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                    if (contract.get("penalties") != null) fl.setPenaltiesJson(mapper.writeValueAsString(contract.get("penalties")));
+                } catch (Exception ex) {
+                    System.out.println("Failed to serialize lists for addContractWithFile (freelance): " + ex.getMessage());
+                }
                 freelanceContractRepository.save(fl);
             } else {
                 // fallback to employee.type
@@ -566,6 +630,13 @@ public class EmployeeController {
                     if (al != null) fc.setAnnualLeaveDays(al);
                     if (contract.get("contractType") != null) fc.setType(String.valueOf(contract.get("contractType")));
                     if (storedPath != null) fc.setDocumentPath(storedPath);
+                    try {
+                        if (contract.get("allowances") != null) fc.setAllowancesJson(mapper.writeValueAsString(contract.get("allowances")));
+                        if (contract.get("bonuses") != null) fc.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                        if (contract.get("deductions") != null) fc.setDeductionsJson(mapper.writeValueAsString(contract.get("deductions")));
+                    } catch (Exception ex) {
+                        System.out.println("Failed to serialize lists for addContractWithFile (fallback fulltime): " + ex.getMessage());
+                    }
                     fulltimeContractRepository.save(fc);
                 } else {
                     FreelanceContract fl = new FreelanceContract();
@@ -594,6 +665,12 @@ public class EmployeeController {
                         if (d != null) fl.setCommittedDeadline(d);
                     }
                     if (storedPath != null) fl.setDocumentPath(storedPath);
+                    try {
+                        if (contract.get("bonuses") != null) fl.setBonusesJson(mapper.writeValueAsString(contract.get("bonuses")));
+                        if (contract.get("penalties") != null) fl.setPenaltiesJson(mapper.writeValueAsString(contract.get("penalties")));
+                    } catch (Exception ex) {
+                        System.out.println("Failed to serialize lists for addContractWithFile (fallback freelance): " + ex.getMessage());
+                    }
                     freelanceContractRepository.save(fl);
                 }
             }

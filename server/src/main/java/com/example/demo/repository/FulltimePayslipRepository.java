@@ -28,9 +28,9 @@ public interface FulltimePayslipRepository extends JpaRepository<FulltimePayslip
 
     @Query(value = """
         SELECT 
-            p.month as month, 
-            p.year as year, 
-            fp.net_salary as netPay, 
+            p.month as "month", 
+            p.year as "year", 
+            fp.net_salary as "netPay", 
             p.status as status
         FROM fulltime_payslip fp
         JOIN payroll p ON fp.payroll_id = p.id

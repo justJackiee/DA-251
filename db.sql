@@ -420,3 +420,18 @@ FROM payroll p
 LEFT JOIN fulltime_payslip fps ON p.id = fps.payroll_id
 LEFT JOIN freelance_payslip flps ON p.id = flps.payroll_id
 GROUP BY p.id, p.month, p.year, p.status;
+
+-- Test payroll details for John Smith
+INSERT INTO payroll (period_start, period_end, month, year, status, is_approved) VALUES 
+('2024-10-01', '2024-10-31', 10, 2024, 'Paid', TRUE),
+('2024-09-01', '2024-09-30', 9, 2024, 'Paid', TRUE),
+('2024-08-01', '2024-08-31', 8, 2024, 'Paid', TRUE),
+('2024-07-01', '2024-07-31', 7, 2024, 'Paid', TRUE),
+('2024-06-01', '2024-06-30', 6, 2024, 'Paid', TRUE);
+
+INSERT INTO fulltime_payslip (payroll_id, employee_id, contract_id, net_salary, gross_salary) VALUES 
+((SELECT id FROM payroll WHERE month=10), 1, 1, 24000000, 27000000),
+((SELECT id FROM payroll WHERE month=9), 1, 1, 23500000, 27000000),
+((SELECT id FROM payroll WHERE month=8), 1, 1, 24500000, 27000000),
+((SELECT id FROM payroll WHERE month=7), 1, 1, 24000000, 27000000),
+((SELECT id FROM payroll WHERE month=6), 1, 1, 22000000, 25000000);

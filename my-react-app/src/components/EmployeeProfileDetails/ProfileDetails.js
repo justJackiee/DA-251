@@ -199,7 +199,10 @@ export default function ProfileDetails() {
             <SectionHeader title="Payslip" showEdit={true} content={"Show History"} onEdit={handleShowHistory} />
             {latestPayslip ? (
               <SubSection title="Latest Earning">
-                <InfoGrid data={{ "Month": latestPayslip.month, "Net Pay": latestPayslip.netPay }} />
+                <InfoGrid data={{ 
+                  "Month/Year": latestPayslip.monthYear || `${latestPayslip.month}/${latestPayslip.year}`, 
+                  "Net Pay": latestPayslip.netPay ?`${Number(latestPayslip.netPay).toLocaleString()} VND` : '0 VND' 
+                }} />
               </SubSection>
             ) : <div>No payslip data</div>}
           </section>

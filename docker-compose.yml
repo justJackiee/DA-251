@@ -24,7 +24,7 @@ services:
     ports:
       # Backend inside the container listens on port 9000 (see server logs)
       # Map host 5000 -> container 9000 so frontend can continue using http://localhost:5000
-      - "5000:9000"
+      - "5000:5000"
     restart: unless-stopped
     depends_on:
       - postgres

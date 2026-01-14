@@ -1,13 +1,16 @@
 package com.example.demo.repository;
 
+import com.example.demo.dto.PayslipHistoryDTO;
 import com.example.demo.entity.FreelancePayslip;
-import com.example.demo.entity.PayslipHistoryDTO; // Import DTO từ package entity
+import com.example.demo.entity.FreelancePayslipView;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FreelancePayslipRepository extends JpaRepository<FreelancePayslip, Long> {
@@ -39,4 +42,11 @@ public interface FreelancePayslipRepository extends JpaRepository<FreelancePaysl
         LIMIT 1
     """, nativeQuery = true)
     List<PayslipHistoryDTO> findLatest(@Param("empId") Long empId);
+
+    // Query Native vào SQL View để lấy dữ liệu chi tiết kèm JSON
+    @Query(value = "SELECT * FROM view_freelance_payslip_detail WHERE payslip_id = :id", nativeQuery = true)
+    Optional<FreelancePayslipView> findDetailView(@Param("id") Long id);
+
+    // Hàm JPA chuẩn để tìm kiếm
+    Optional<FreelancePayslip> findByPayrollIdAndEmployeeId(Long payrollId, Long employeeId);
 }

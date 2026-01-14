@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom"; 
+import { useParams, useNavigate } from "react-router-dom";
 import { Edit2, ChevronLeft, Briefcase, X, Calendar } from "lucide-react";
-import axios from "axios"; 
+import axios from "axios";
 import CustomScrollbar from "../schollbar";
 
 export default function ProfileDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,10 +43,7 @@ export default function ProfileDetails() {
         Phone: employeeData.info.Phone || '',
         Email: employeeData.info.Email || '',
         Address: employeeData.info.Address || '',
-        City: employeeData.info.City || '',
         Position: employeeData.info.Position || '',
-        Department: employeeData.info.Department || '',
-        StartDate: employeeData.info.StartDate || ''
       });
       setShowEditModal(true);
     }
@@ -62,9 +59,8 @@ export default function ProfileDetails() {
 
   const handleSaveEdit = async () => {
     try {
-      // Log the data being sent
       console.log("Sending update:", editFormData);
-      
+
       const response = await axios.put(
         `http://localhost:5000/api/employees/${id}`,
         editFormData,
@@ -74,20 +70,18 @@ export default function ProfileDetails() {
           }
         }
       );
-      
+
       console.log("Update response:", response.data);
-      
-      // Refresh the profile data from server
+
       const refreshResponse = await axios.get(`http://localhost:5000/api/employees/${id}/profile`);
       setEmployeeData(refreshResponse.data);
-      
+
       setShowEditModal(false);
       alert('Profile updated successfully!');
     } catch (err) {
       console.error("Error updating profile:", err);
       console.error("Error details:", err.response?.data);
-      
-      // More detailed error message
+
       let errorMsg = 'Failed to update profile. ';
       if (err.response) {
         errorMsg += `Server error: ${err.response.status} - ${err.response.data?.message || err.response.statusText}`;
@@ -96,7 +90,7 @@ export default function ProfileDetails() {
       } else {
         errorMsg += err.message;
       }
-      
+
       alert(errorMsg);
     }
   };
@@ -138,9 +132,9 @@ export default function ProfileDetails() {
               <p className="text-sm text-gray-500">{info.Position}</p>
             </div>
           </div>
-          
+
           <span className={`text-xs font-medium px-3 py-1 rounded-full 
-            ${info.Position === 'Fulltime' 
+            ${info.Position === 'Fulltime'
               ? 'bg-green-100 text-green-700'
               : 'bg-orange-100 text-orange-700'
             }`}>
@@ -151,26 +145,30 @@ export default function ProfileDetails() {
 
       <div className="grid grid-cols-12 gap-6 items-start">
         {/* Left Content */}
-        <div className="col-span-9 space-y-6">
-          
+        <div className="col-span-12 space-y-6">
+
           {/* General Info */}
           <section id="general-info" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
             <SectionHeader title="General Information" content="Edit" onEdit={handleEditClick} />
-            <SubSection title="Personal Information">
-              <InfoGrid data={{ "Employee ID": info.ID, Phone: info.Phone, Email: info.Email, Sex: "N/A" }} />
-            </SubSection>
-            <SubSection title="Address Information">
-              <InfoGrid data={{ Address: info.Address, City: info.City }} />
-            </SubSection>
-            <SubSection title="Employment Information">
-              <InfoGrid data={{ "Job Title": info.Position, Department: info.Department, "Start Date": info.StartDate }} />
-            </SubSection>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SubSection title="Personal Information">
+                <InfoGrid data={{ "Employee ID": info.ID, Phone: info.Phone, Email: info.Email, Sex: info.Sex }} cols={1} />
+              </SubSection>
+              <div className="space-y-6">
+                <SubSection title="Address Information">
+                  <InfoGrid data={{ Address: info.Address }} cols={1} />
+                </SubSection>
+                <SubSection title="Employment Information">
+                  <InfoGrid data={{ "Job Title": info.Position }} cols={1} />
+                </SubSection>
+              </div>
+            </div>
           </section>
 
           {/* Contract Section */}
           <section id="contract-section" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
             <SectionHeader title="Contract" showEdit={false} />
-            
+
             {contracts && contracts.length > 0 ? (
               <>
                 {contracts.length > 2 ? (
@@ -198,12 +196,15 @@ export default function ProfileDetails() {
 
           {/* Payslip Section */}
           <section id="payslip-section" className="bg-white rounded-2xl shadow p-6 scroll-mt-24">
-             <SectionHeader title="Payslip" showEdit={true} content={"Show History"} onEdit={handleShowHistory} />
-             {latestPayslip ? (
-                <SubSection title="Latest Earning">
-                   <InfoGrid data={{ "Month": latestPayslip.month, "Net Pay": latestPayslip.netPay }} />
-                </SubSection>
-             ) : <div>No payslip data</div>}
+            <SectionHeader title="Payslip" showEdit={true} content={"Show History"} onEdit={handleShowHistory} />
+            {latestPayslip ? (
+              <SubSection title="Latest Earning">
+                <InfoGrid data={{ 
+                  "Month/Year": latestPayslip.monthYear || `${latestPayslip.month}/${latestPayslip.year}`, 
+                  "Net Pay": latestPayslip.netPay ?`${Number(latestPayslip.netPay).toLocaleString()} VND` : '0 VND' 
+                }} />
+              </SubSection>
+            ) : <div>No payslip data</div>}
           </section>
         </div>
       </div>
@@ -215,7 +216,7 @@ export default function ProfileDetails() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
               <h2 className="text-xl font-semibold text-gray-800">Edit Employee Information</h2>
-              <button 
+              <button
                 onClick={() => setShowEditModal(false)}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
@@ -277,16 +278,6 @@ export default function ProfileDetails() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">City</label>
-                      <input
-                        type="text"
-                        name="City"
-                        value={editFormData.City}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -305,26 +296,6 @@ export default function ProfileDetails() {
                         <option value="Fulltime">Fulltime</option>
                         <option value="Freelance">Freelance</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">Department</label>
-                      <input
-                        type="text"
-                        name="Department"
-                        value={editFormData.Department}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">Start Date</label>
-                      <input
-                        type="date"
-                        name="StartDate"
-                        value={editFormData.StartDate}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
                     </div>
                   </div>
                 </div>
@@ -357,7 +328,7 @@ export default function ProfileDetails() {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b bg-gray-50">
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-orange-500"/>
+                <Briefcase className="w-5 h-5 text-orange-500" />
                 Payslip History
               </h2>
               <button onClick={() => setShowHistoryModal(false)} className="p-1 hover:bg-gray-200 rounded-full">
@@ -375,7 +346,7 @@ export default function ProfileDetails() {
                     <div key={index} className="p-4 hover:bg-orange-50 transition-colors flex justify-between items-center group">
                       <div className="flex items-center gap-3">
                         <div className="bg-orange-100 p-2 rounded-lg text-orange-600">
-                            <Calendar className="w-5 h-5" />
+                          <Calendar className="w-5 h-5" />
                         </div>
                         <div>
                           <p className="font-semibold text-gray-800">Tháng {item.month}/{item.year}</p>
@@ -386,7 +357,7 @@ export default function ProfileDetails() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-gray-800 flex items-center justify-end gap-1">
-                           {item.netPay ? Number(item.netPay).toLocaleString() : 0} <span className="text-xs text-gray-500">VND</span>
+                          {item.netPay ? Number(item.netPay).toLocaleString() : 0} <span className="text-xs text-gray-500">VND</span>
                         </p>
                         <p className="text-xs text-green-600 font-medium">Thực lãnh</p>
                       </div>
@@ -395,7 +366,7 @@ export default function ProfileDetails() {
                 </div>
               ) : (
                 <div className="p-8 text-center text-gray-400 italic">
-                    <p>Chưa có lịch sử lương nào.</p>
+                  <p>Chưa có lịch sử lương nào.</p>
                 </div>
               )}
             </div>
@@ -441,26 +412,38 @@ function ContractItem({ contract }) {
   );
 }
 
-function SectionHeader({ title, showEdit = true, content, onEdit }) { 
+function SectionHeader({ title, showEdit = true, content, onEdit }) {
   return (
     <div className="mb-4 border-b pb-2 font-bold flex justify-between">
       <h3>{title}</h3>
       {showEdit && (
-        <button 
+        <button
           onClick={onEdit}
           className="text-sm text-orange-500 hover:text-orange-600 transition-colors"
         >
-          <Edit2 className="w-4 h-4 inline"/> {content}
+          <Edit2 className="w-4 h-4 inline" /> {content}
         </button>
       )}
     </div>
   );
 }
 
-function SubSection({ title, children, className="" }) { 
-  return <div className={`mb-4 ${className}`}><h4 className="text-xs text-gray-500 uppercase mb-2">{title}</h4>{children}</div> 
+function SubSection({ title, children, className = "" }) {
+  return <div className={`mb-4 ${className}`}><h4 className="text-xs text-gray-500 uppercase mb-2">{title}</h4>{children}</div>
 }
 
-function InfoGrid({ data }) { 
-  return <div className="grid grid-cols-2 gap-2 text-sm">{Object.entries(data).map(([k,v]) => <div key={k}><span className="text-gray-400 block">{k}</span><span>{v || 'N/A'}</span></div>)}</div> 
+function InfoGrid({ data, cols = 2 }) {
+  // If cols is 1, use 'grid-cols-1', otherwise use 'grid-cols-2'
+  const gridClass = cols === 1 ? 'grid-cols-1' : 'grid-cols-2';
+
+  return (
+    <div className={`grid ${gridClass} gap-2 text-sm`}>
+      {Object.entries(data).map(([k, v]) => (
+        <div key={k}>
+          <span className="text-gray-400 block">{k}</span>
+          <span>{v || 'N/A'}</span>
+        </div>
+      ))}
+    </div>
+  );
 }

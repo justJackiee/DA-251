@@ -201,7 +201,9 @@ export default function ProfileDetails() {
               <SubSection title="Latest Earning">
                 <InfoGrid data={{ 
                   "Month/Year": latestPayslip.monthYear || `${latestPayslip.month}/${latestPayslip.year}`, 
-                  "Net Pay": latestPayslip.netPay ?`${Number(latestPayslip.netPay).toLocaleString()} VND` : '0 VND' 
+                  "Status": <span className={`${latestPayslip.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {latestPayslip.status || 'Paid'}</span>,
+                  "Net Pay": latestPayslip.netPay ?`${Number(latestPayslip.netPay).toLocaleString()} VND` : '0 VND'
                 }} />
               </SubSection>
             ) : <div>No payslip data</div>}

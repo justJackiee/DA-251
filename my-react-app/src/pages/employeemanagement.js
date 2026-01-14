@@ -6,7 +6,7 @@ import AddEmployeeModal from '../components/AddEmployeeModal';
 import FiltersBar from '../components/FiltersBar';
 
 function EmployeeManagement() {
-  // const [activeTab, setActiveTab] = useState('team');
+  const [activeTab, setActiveTab] = useState('fulltime');
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ office: '', department: '', position: '', gender: '', type: '', status: '' });
   
@@ -96,10 +96,13 @@ function EmployeeManagement() {
   // State for add-contract modal
   const [addContractOpen, setAddContractOpen] = useState(false);
   const [contractEmployee, setContractEmployee] = useState(null);
+  const [onContractAddedCallback, setOnContractAddedCallback] = useState(null);
 
-  const handleOpenAddContract = (employee) => {
+  const handleOpenAddContract = (employee, callback) => {
     setContractEmployee(employee);
     setAddContractOpen(true);
+    // Store callback to be called after contract is added
+    setOnContractAddedCallback(() => callback);
   };
 
   const filteredData = useMemo(() => {
@@ -119,9 +122,12 @@ function EmployeeManagement() {
       const matchType = filters.type ? ((emp.type || '').toLowerCase().trim() === (filters.type || '').toLowerCase().trim()) : true;
       const matchStatus = filters.status ? ((emp.status || '').toLowerCase().trim() === (filters.status || '').toLowerCase().trim()) : true;
 
-      return matchSearch && matchDept && matchOffice && matchPosition && matchGender && matchType && matchStatus;
+      // Filter by activeTab
+      const matchTab = activeTab === 'fulltime' ? (emp.type || '').toLowerCase() === 'fulltime' : (emp.type || '').toLowerCase() === 'freelance';
+
+      return matchSearch && matchDept && matchOffice && matchPosition && matchGender && matchType && matchStatus && matchTab;
     });
-  }, [data, search, filters]);
+  }, [data, search, filters, activeTab]);
 
   if (loading) {
     return <div className="p-10 text-center">Đang tải dữ liệu từ Server...</div>;
@@ -133,10 +139,21 @@ function EmployeeManagement() {
       <div className="flex justify-end">
         
       </div>
-      <FiltersBar search={search} onSearch={setSearch} filters={filters} onFilterChange={onFilterChange} onClear={onClear} positions={positions} genders={genders} types={types} statuses={statuses} />
+      <FiltersBar 
+        search={search} 
+        onSearch={setSearch} 
+        filters={filters} 
+        onFilterChange={onFilterChange} 
+        onClear={onClear} 
+        positions={positions} 
+        genders={genders} 
+        types={types} 
+        statuses={statuses}
+        onAddSuccess={fetchEmployees}
+      />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <CEmployeeTable data={filteredData} search={search} filters={filters} onAddContract={handleOpenAddContract} />
+        <CEmployeeTable data={filteredData} search={search} filters={filters} onAddContract={handleOpenAddContract} activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
 
       <AddEmployeeModal
@@ -148,6 +165,11 @@ function EmployeeManagement() {
           setAddContractOpen(false);
           // refresh list
           fetchEmployees();
+          // Call the callback if provided (for reactivating employee)
+          if (onContractAddedCallback) {
+            onContractAddedCallback();
+            setOnContractAddedCallback(null);
+          }
         }}
       />
     </div>

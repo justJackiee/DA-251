@@ -5,9 +5,11 @@ import com.example.demo.entity.FreelancePayslip;
 import com.example.demo.entity.FreelancePayslipView;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -49,4 +51,8 @@ public interface FreelancePayslipRepository extends JpaRepository<FreelancePaysl
 
     // Hàm JPA chuẩn để tìm kiếm
     Optional<FreelancePayslip> findByPayrollIdAndEmployeeId(Long payrollId, Long employeeId);
+
+    @Modifying
+    @Transactional
+    void deleteByEmployeeId(Long employeeId);
 }

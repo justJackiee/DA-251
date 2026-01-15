@@ -31,6 +31,16 @@ public class FulltimePayslip {
     @Column(name = "gross_salary")
     private BigDecimal grossSalary;
 
+    // --- [NEW FIELDS] SNAPSHOT DATA FOR FORMULA ---
+    @Column(name = "snap_actual_work_days")
+    private BigDecimal snapActualWorkDays;
+
+    @Column(name = "snap_ot_hours")
+    private BigDecimal snapOtHours;
+
+    @Column(name = "snap_taxable_income")
+    private BigDecimal snapTaxableIncome;
+
     // Getters and Setters
     public Long getPayslipId() { return payslipId; }
     public void setPayslipId(Long payslipId) { this.payslipId = payslipId; }

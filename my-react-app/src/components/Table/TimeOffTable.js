@@ -1,9 +1,12 @@
 ﻿import React, { useEffect, useState } from "react";
+import { FaSearch } from "react-icons/fa";
 import AddLeaveRequestModal from "../AddLeaveRequestModal";
 
 export default function TimeOffTable() {
   const [activeTab, setActiveTab] = useState("pending");
   const [rows, setRows] = useState([]);
+  const [filteredRows, setFilteredRows] = useState([]);
+  const [searchName, setSearchName] = useState("");
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -16,6 +19,8 @@ export default function TimeOffTable() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setRows(data);
+      setFilteredRows(data);
+      setSearchName("");
 
       // also fetch full counts by retrieving all and counting locally
       const allRes = await fetch(`http://localhost:5000/api/leave-requests`);
@@ -29,6 +34,16 @@ export default function TimeOffTable() {
       console.error(e);
     }
   }
+
+  // Filter rows by employee name
+  const handleSearch = (e) => {
+    const value = e.target.value.toLowerCase();
+    setSearchName(e.target.value);
+    const filtered = rows.filter((row) =>
+      row.name.toLowerCase().includes(value)
+    );
+    setFilteredRows(filtered);
+  };
 
   useEffect(() => {
     load(activeTab);
@@ -58,7 +73,7 @@ export default function TimeOffTable() {
     <div className="bg-white p-6 rounded-lg shadow border">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">{rows.length} Request</h2>
+        <h2 className="text-xl font-bold">{filteredRows.length} Request</h2>
         <button 
           onClick={() => setIsModalOpen(true)}
           className="ml-auto px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md flex items-center gap-2" 
@@ -95,6 +110,18 @@ export default function TimeOffTable() {
         )) }
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-4 relative">
+        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search employee name"
+          value={searchName}
+          onChange={handleSearch}
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
@@ -111,7 +138,7 @@ export default function TimeOffTable() {
           </thead>
 
           <tbody>
-            {rows.map((row) => (
+            {filteredRows.map((row) => (
               <tr key={row.id} className="border-t hover:bg-gray-50">
                 {/* NAME */}
                 <td className="p-3 flex items-center gap-3">

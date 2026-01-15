@@ -1,11 +1,10 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.PayrollDashboardDTO;
-import com.example.demo.dto.PayrollRequest;
-import com.example.demo.dto.PayslipDetailDTO;
+import com.example.demo.dto.*;
 import com.example.demo.entity.*;
 import com.example.demo.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class PayrollService {
 
     private final PayrollRepository payrollRepo;
+    private final FulltimePayslipRepository fulltimePayslipRepo;
     private final FulltimePayslipViewRepository fulltimeViewRepo;
     private final FreelancePayslipViewRepository freelanceViewRepo;
     private final EmployeeRepository employeeRepo;
@@ -31,7 +32,7 @@ public class PayrollService {
     private final ObjectMapper objectMapper;
     private final FreelanceContractRepository freelanceContractRepo;
 
-    private static final double STANDARD_HOURS_PER_DAY = 8.0;
+    private static final BigDecimal STANDARD_HOURS_PER_DAY = BigDecimal.valueOf(8.0);
 
     // =========================================================================
     // 1. DASHBOARD
@@ -59,7 +60,7 @@ public class PayrollService {
     public void calculatePayroll(PayrollRequest request) {
         int month = request.getMonth();
         int year = request.getYear();
-        Integer payrollId = ensurePayrollPeriodExists(month, year);
+        Long payrollId = ensurePayrollPeriodExists(month, year);
         List<PayrollRequest.EmployeeInput> inputs = request.getEmployeeInputs();
 
         if (inputs == null || inputs.isEmpty()) {
@@ -75,7 +76,7 @@ public class PayrollService {
         }
     }
 
-    private void processSingleEmployee(Integer payrollId, PayrollRequest.EmployeeInput input, int month, int year)
+    private void processSingleEmployee(Long payrollId, PayrollRequest.EmployeeInput input, int month, int year)
             throws JsonProcessingException {
         Long empId = input.getEmployeeId();
         String type = employeeRepo.findTypeById(empId);
@@ -83,29 +84,37 @@ public class PayrollService {
             return;
 
         if ("Fulltime".equalsIgnoreCase(type)) {
-            // [LOGIC FULLTIME CẬP NHẬT]
-
+            // [LOGIC FULLTIME]
             // 1. Tính ngày công từ Timesheet
-            Double totalHours = timesheetRepo.calculateTotalWorkedHours(empId, month, year);
-            int actualWorkDays = (totalHours != null) ? (int) (totalHours / STANDARD_HOURS_PER_DAY) : 0;
+            Double totalHours = timesheetRepo.calculateTotalWorkedHours(empId, month, year); //
+            BigDecimal actualWorkDays = BigDecimal.ZERO;
 
-            // 2. Tính OT Hours TỰ ĐỘNG TỪ DB (Bỏ qua input nhập tay)
-            Double totalOT = timesheetRepo.calculateTotalOvertimeHours(empId, month, year);
-            BigDecimal otHours = BigDecimal.valueOf(totalOT != null ? totalOT : 0.0);
-
-            // 3. Manual Bonus
-            String bonusJson = "{}";
-            if (input.getFulltimeManualBonuses() != null && !input.getFulltimeManualBonuses().isEmpty()) {
-                bonusJson = objectMapper.writeValueAsString(input.getFulltimeManualBonuses());
+            if (totalHours != null) {
+                // Logic: Tổng giờ / 8 = Số công (Làm tròn 2 chữ số)
+                actualWorkDays = BigDecimal.valueOf(totalHours).divide(STANDARD_HOURS_PER_DAY, 2, RoundingMode.HALF_UP);
             }
 
+            // 2. Tính OT Hours từ Timesheet
+            Double totalOT = timesheetRepo.calculateTotalOvertimeHours(empId, month, year); //
+            BigDecimal otHours = BigDecimal.valueOf(totalOT != null ? totalOT : 0.0);
+
+            // 3. Chuẩn bị JSON Bonus & Penalty
+            String bonusJson = input.getFulltimeManualBonuses() != null
+                    ? objectMapper.writeValueAsString(input.getFulltimeManualBonuses())
+                    : "{}";
+
+            String penaltyJson = input.getFulltimeManualPenalties() != null
+                    ? objectMapper.writeValueAsString(input.getFulltimeManualPenalties())
+                    : "{}";
+
             // 4. Gọi Procedure
-            payrollRepo.generateFulltimePayslip(
+            fulltimePayslipRepo.generatePayslip(
                     payrollId,
-                    empId.intValue(),
+                    empId,
                     actualWorkDays,
-                    otHours, // Giá trị từ DB
-                    bonusJson);
+                    otHours,
+                    bonusJson,
+                    penaltyJson);
 
         } else if ("Freelance".equalsIgnoreCase(type)) {
             // Logic Freelance giữ nguyên (Selection)
@@ -130,36 +139,57 @@ public class PayrollService {
     // 3. MANUAL CALCULATION (Gọi từ nút "Tính thử" UI)
     // =========================================================================
     @Transactional
-    public void calculateFulltimePayslip(Long employeeId, int month, int year, Integer actualWorkDays, Double otHours,
-            Map<String, Double> bonuses) {
-        Integer payrollId = ensurePayrollPeriodExists(month, year);
-
-        // Nếu FE không truyền workDays, tự tính từ Timesheet
-        int workDays = 0;
-        if (actualWorkDays != null) {
-            workDays = actualWorkDays;
-        } else {
-            Double totalHours = timesheetRepo.calculateTotalWorkedHours(employeeId, month, year);
-            if (totalHours != null) {
-                workDays = (int) (totalHours / STANDARD_HOURS_PER_DAY);
-            }
-        }
-
-        String bonusJson = "{}";
+    public PayslipDetailDTO calculateFulltimePayslipSingle(FulltimePayslipCalculationRequest req) {
         try {
-            if (bonuses != null && !bonuses.isEmpty()) {
-                bonusJson = objectMapper.writeValueAsString(bonuses);
+            // 1. Ensure Payroll Period
+            Long payrollId = req.getPayrollId();
+            if (payrollId == null) {
+                payrollId = ensurePayrollPeriodExists(req.getMonth(), req.getYear());
             }
-        } catch (Exception e) {
-            throw new RuntimeException("JSON error", e);
-        }
 
-        payrollRepo.generateFulltimePayslip(
-                payrollId,
-                employeeId.intValue(),
-                workDays,
-                BigDecimal.valueOf(otHours != null ? otHours : 0.0),
-                bonusJson);
+            // [STRICT LOGIC: ALWAYS CALCULATE FROM TIMESHEET]
+            // Không check req.getActualWorkDays() nữa
+
+            // 2. Tính ngày công
+            Double totalHours = timesheetRepo.calculateTotalWorkedHours(req.getEmployeeId(), req.getMonth(),
+                    req.getYear()); //
+            BigDecimal actualWorkDays = (totalHours != null)
+                    ? BigDecimal.valueOf(totalHours).divide(STANDARD_HOURS_PER_DAY, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            // 3. Tính OT
+            Double totalOT = timesheetRepo.calculateTotalOvertimeHours(req.getEmployeeId(), req.getMonth(),
+                    req.getYear()); //
+            BigDecimal otHours = BigDecimal.valueOf(totalOT != null ? totalOT : 0.0);
+
+            // 4. Manual Inputs (Chỉ Bonus/Penalty được nhập tay)
+            String bonusJson = req.getBonuses() != null ? objectMapper.writeValueAsString(req.getBonuses()) : "{}";
+            String penaltyJson = req.getManualPenalties() != null
+                    ? objectMapper.writeValueAsString(req.getManualPenalties())
+                    : "{}";
+
+            // 5. Call Procedure
+            fulltimePayslipRepo.generatePayslip( //
+                    payrollId,
+                    req.getEmployeeId(),
+                    actualWorkDays,
+                    otHours,
+                    bonusJson,
+                    penaltyJson);
+
+            // 6. Get Created Payslip ID
+            FulltimePayslip created = fulltimePayslipRepo.findTopByPayrollIdAndEmployeeIdOrderByPayslipIdDesc(payrollId,
+                    req.getEmployeeId()); //
+            if (created == null)
+                throw new RuntimeException("Payslip generation failed.");
+
+            // 7. Return Detail View
+            return getPayslipDetail(payrollId, req.getEmployeeId());
+
+        } catch (Exception e) {
+            log.error("Error calculating single payslip", e);
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     // =========================================================================
@@ -228,6 +258,12 @@ public class PayrollService {
                 .baseSalary(view.getBaseSalary())
                 .grossSalary(view.getGrossSalary())
                 .netSalary(view.getNetSalary())
+                .taxableIncome(view.getTaxableIncome())
+                // --- FORMULA INPUTS ---
+                .actualWorkDays(view.getActualWorkDays())
+                .formulaStandardDays(view.getFormulaStandardDays())
+                .otHours(view.getOtHours())
+                .formulaOtRate(view.getFormulaOtRate())
                 .build();
         dto.setAllowances(parseJsonToList(view.getAllowancesJson()));
         dto.setBonuses(parseJsonToList(view.getBonusesJson()));
@@ -266,14 +302,14 @@ public class PayrollService {
     }
 
     @Transactional
-    public void lockPayroll(Integer payrollId) {
+    public void lockPayroll(Long payrollId) {
         if (!payrollRepo.existsById(payrollId)) {
             throw new RuntimeException("Payroll ID not found");
         }
         payrollRepo.updateStatus(payrollId, "Paid");
     }
 
-    private Integer ensurePayrollPeriodExists(int month, int year) {
+    private Long ensurePayrollPeriodExists(int month, int year) {
         return payrollRepo.findPayrollIdByMonthYear(month, year)
                 .orElseGet(() -> {
                     LocalDate start = LocalDate.of(year, month, 1);

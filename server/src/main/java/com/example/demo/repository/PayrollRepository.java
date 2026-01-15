@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -107,4 +108,30 @@ public interface PayrollRepository extends JpaRepository<Payroll, Integer> {
         @Transactional
         @Query("UPDATE Payroll p SET p.status = :status WHERE p.id = :id")
         void updateStatus(@Param("id") Integer id, @Param("status") String status);
+
+        // Find unpaid salary records for an employee
+        @Query(value = """
+                        SELECT DISTINCT p.id, p.month, p.year, p.status
+                        FROM payroll p
+                        WHERE p.status = 'Unpaid'
+                        AND (
+                            EXISTS (
+                                SELECT 1 FROM fulltime_payslip fp 
+                                WHERE fp.payroll_id = p.id AND fp.employee_id = :employeeId
+                            )
+                            OR
+                            EXISTS (
+                                SELECT 1 FROM freelance_payslip flp 
+                                WHERE flp.payroll_id = p.id AND flp.employee_id = :employeeId
+                            )
+                        )
+                        ORDER BY p.year DESC, p.month DESC
+                        """, nativeQuery = true)
+        List<Map<String, Object>> findUnpaidPayrollByEmployeeId(@Param("employeeId") Long employeeId);
+
+        // Delete all payroll records for an employee
+        @Modifying
+        @Transactional
+        @Query(value = "DELETE FROM payroll WHERE id IN (SELECT p.id FROM payroll p WHERE EXISTS (SELECT 1 FROM fulltime_payslip fp WHERE fp.payroll_id = p.id AND fp.employee_id = :employeeId) OR EXISTS (SELECT 1 FROM freelance_payslip flp WHERE flp.payroll_id = p.id AND flp.employee_id = :employeeId))", nativeQuery = true)
+        void deleteByEmployeeId(@Param("employeeId") Long employeeId);
 }

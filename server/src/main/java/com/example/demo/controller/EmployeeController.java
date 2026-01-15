@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.Employee;
 import com.example.demo.repository.EmployeeRepository;
+import com.example.demo.repository.PayrollRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -50,6 +51,8 @@ public class EmployeeController {
     @Autowired
     private EmployeeRepository employeeRepository;
     @Autowired
+    private PayrollRepository payrollRepository;
+    @Autowired
     private FulltimeContractRepository fulltimeContractRepository;
     @Autowired
     private FulltimeContractAllowanceRepository fulltimeContractAllowanceRepository;
@@ -72,6 +75,37 @@ public class EmployeeController {
     @GetMapping
     public List<Employee> getAll() {
         return employeeRepository.findAll();
+    }
+
+    // Check if employee has unpaid salaries (must be before generic /{id} to match correctly)
+    @GetMapping("/{id}/has-unpaid-salary")
+    public ResponseEntity<?> hasUnpaidSalary(@PathVariable Long id) {
+        try {
+            System.out.println("hasUnpaidSalary called with employeeId: " + id);
+            // Ensure employee exists
+            if (!employeeRepository.existsById(id)) {
+                System.out.println("Employee not found with id: " + id);
+                return ResponseEntity.notFound().build();
+            }
+
+            // Query: Check if employee has any unpaid payroll records
+            // A payroll record is unpaid if status = 'Unpaid'
+            List<Map<String, Object>> unpaidRecords = payrollRepository.findUnpaidPayrollByEmployeeId(id);
+            System.out.println("Found unpaid records: " + (unpaidRecords != null ? unpaidRecords.size() : 0));
+            
+            boolean hasUnpaid = unpaidRecords != null && !unpaidRecords.isEmpty();
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "hasUnpaidSalary", hasUnpaid,
+                "unpaidCount", hasUnpaid ? unpaidRecords.size() : 0,
+                "message", hasUnpaid ? "Employee has unpaid salary" : "All salary paid"
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Error in hasUnpaidSalary: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     @GetMapping("/{id}")
@@ -238,6 +272,7 @@ public class EmployeeController {
             return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
         }
     }
+
     @PostMapping
     public ResponseEntity<?> createEmployee(@RequestBody EmployeeCreationRequest request) {
         try {
@@ -821,6 +856,93 @@ public class EmployeeController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
+        try {
+            // Ensure employee exists
+            if (!employeeRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Delete associated contracts and payslips first to maintain referential integrity
+            fulltimeContractRepository.deleteByEmployeeId(id);
+            freelanceContractRepository.deleteByEmployeeId(id);
+            fulltimeRepo.deleteByEmployeeId(id);
+            freelanceRepo.deleteByEmployeeId(id);
+            payrollRepository.deleteByEmployeeId(id);
+            
+            // Finally delete the employee
+            employeeRepository.deleteById(id);
+            
+            return ResponseEntity.ok(Map.of("success", true, "message", "Employee deleted successfully"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false, 
+                "message", "Failed to delete employee. This employee may have associated records that prevent deletion."
+            ));
+        }
+    }
+
+    // Check and update employee status based on active contracts
+    @PostMapping("/{id}/update-status-from-contracts")
+    public ResponseEntity<?> updateEmployeeStatusFromContracts(@PathVariable Long id) {
+        try {
+            Employee emp = employeeRepository.findById(id).orElse(null);
+            if (emp == null) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "Employee not found"));
+            }
+
+            LocalDate today = LocalDate.now();
+            
+            // Check if employee has any active fulltime contracts
+            List<FulltimeContract> fulltimeContracts = fulltimeContractRepository.findByEmployeeId(id);
+            boolean hasActiveFTContract = false;
+            for (FulltimeContract contract : fulltimeContracts) {
+                LocalDate endDate = contract.getEndDate();
+                // Contract is active if end date is null (indefinite) or end date is in the future
+                if (endDate == null || endDate.isAfter(today)) {
+                    hasActiveFTContract = true;
+                    break;
+                }
+            }
+            
+            // Check if employee has any active freelance contracts
+            List<FreelanceContract> freelanceContracts = freelanceContractRepository.findByEmployeeId(id);
+            boolean hasActiveFlContract = false;
+            for (FreelanceContract contract : freelanceContracts) {
+                LocalDate endDate = contract.getEndDate();
+                if (endDate == null || endDate.isAfter(today)) {
+                    hasActiveFlContract = true;
+                    break;
+                }
+            }
+            
+            // If no active contracts, set employee to Inactive
+            String oldStatus = emp.getStatus();
+            if (!hasActiveFTContract && !hasActiveFlContract) {
+                emp.setStatus("Inactive");
+                employeeRepository.save(emp);
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Employee status updated to Inactive (no active contracts)",
+                    "oldStatus", oldStatus,
+                    "newStatus", "Inactive"
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Employee has active contracts - status remains " + oldStatus,
+                    "hasActiveContracts", true,
+                    "currentStatus", oldStatus
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Error updating employee status: " + e.getMessage()));
         }
     }
 }

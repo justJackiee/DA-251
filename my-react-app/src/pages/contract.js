@@ -30,104 +30,103 @@ function Contract() {
   }, [fullTimeData]);
 
   // Fetch full time contracts
+  const fetchContracts = async () => {
+    try {
+      // Fetch fulltime contracts and employees in parallel
+      const [resFullTime, resEmployees] = await Promise.all([
+        axios.get('/api/fulltime-contracts'),
+        axios.get('/api/employees')
+      ]);
+
+      console.log("[Contract] API response:", resFullTime, resEmployees);
+
+      const rawFullTime = Array.isArray(resFullTime.data) ? resFullTime.data : (resFullTime.data && Array.isArray(resFullTime.data.data) ? resFullTime.data.data : []);
+      const employeesRaw = Array.isArray(resEmployees.data) ? resEmployees.data : (resEmployees.data && Array.isArray(resEmployees.data.data) ? resEmployees.data.data : []);
+
+      // Build employee id -> full name map
+      const empMap = {};
+      employeesRaw.forEach(e => {
+        const fullName = `${e.fName || e.f_name || ''}${e.mName ? ' ' + e.mName : ''}${e.lName ? ' ' + e.lName : ''}`.trim();
+        empMap[e.id || e.ID || e.employeeId] = fullName;
+      });
+
+      const parseToDate = (val) => {
+        if (!val) return null;
+        if (typeof val === "string") return new Date(val);
+        if (typeof val === "object" && val.year) return new Date(val.year, val.month - 1, val.day);
+        try { return new Date(val); } catch (e) { return null; }
+      };
+
+      // Format fulltime contracts
+      const formattedFullTime = rawFullTime.map(ct => {
+        const endDateObj = parseToDate(ct.endDate || ct.end_date || ct.endDateObject);
+        const isExpired = endDateObj ? endDateObj < new Date() : false;
+
+        const contractId = ct.contractId || ct.contract_id || ct.id;
+        const employeeId = ct.employeeId || ct.employee_id || ct.employeeIdValue;
+        const startDateRaw = ct.startDate || ct.start_date || null;
+        const endDateRaw = ct.endDate || ct.end_date || (endDateObj ? endDateObj.toISOString().slice(0,10) : null);
+        const baseSalary = ct.baseSalary || ct.base_salary || null;
+        const otRate = ct.otRate || ct.ot_rate || null;
+        const annualLeaveDays = ct.annualLeaveDays || ct.annual_leave_days || null;
+        const typeVal = ct.type || ct.contractType || null;
+
+        return {
+          contractId: contractId,
+          employeeId: employeeId,
+          employee_name: empMap[employeeId] || empMap[String(employeeId)] || '',
+          startDate: startDateRaw,
+          endDate: endDateRaw,
+          baseSalary: baseSalary,
+          otRate: otRate,
+          annualLeaveDays: annualLeaveDays,
+          type: typeVal,
+          status: isExpired ? "Expired" : "Active"
+        };
+      });
+
+      // Try to parse JSON fields from backend (allowances/bonuses/deductions)
+      const parseListField = (v) => {
+        if (!v) return [];
+        try {
+          if (typeof v === 'string') return JSON.parse(v);
+          if (Array.isArray(v)) return v;
+          return [];
+        } catch (e) { return [] }
+      };
+
+      // Attach parsed lists if backend provided JSON fields
+      const formattedFullTimeWithLists = formattedFullTime.map((f, idx) => {
+        const src = rawFullTime[idx] || {};
+        return {
+          ...f,
+          allowances: parseListField(src.allowancesJson || src.allowances || src.allowances_json),
+          bonuses: parseListField(src.bonusesJson || src.bonuses || src.bonuses_json),
+          deductions: parseListField(src.deductionsJson || src.deductions || src.deductions_json)
+        };
+      });
+
+      setFullTimeData(formattedFullTimeWithLists || []);
+      setLoading(false);
+    } catch (err) {
+      console.error("Failed to load fulltime contract data:", err);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchContracts = async () => {
-      try {
-        // Fetch fulltime contracts and employees in parallel
-        const [resFullTime, resEmployees] = await Promise.all([
-          axios.get('/api/fulltime-contracts'),
-          axios.get('/api/employees')
-        ]);
-
-        console.log("[Contract] API response:", resFullTime, resEmployees);
-
-        const rawFullTime = Array.isArray(resFullTime.data) ? resFullTime.data : (resFullTime.data && Array.isArray(resFullTime.data.data) ? resFullTime.data.data : []);
-        const employeesRaw = Array.isArray(resEmployees.data) ? resEmployees.data : (resEmployees.data && Array.isArray(resEmployees.data.data) ? resEmployees.data.data : []);
-
-        // Build employee id -> full name map
-        const empMap = {};
-        employeesRaw.forEach(e => {
-          const fullName = `${e.fName || e.f_name || ''}${e.mName ? ' ' + e.mName : ''}${e.lName ? ' ' + e.lName : ''}`.trim();
-          empMap[e.id || e.ID || e.employeeId] = fullName;
-        });
-
-        const parseToDate = (val) => {
-          if (!val) return null;
-          if (typeof val === "string") return new Date(val);
-          if (typeof val === "object" && val.year) return new Date(val.year, val.month - 1, val.day);
-          try { return new Date(val); } catch (e) { return null; }
-        };
-
-        // Format fulltime contracts
-        const formattedFullTime = rawFullTime.map(ct => {
-          const endDateObj = parseToDate(ct.endDate || ct.end_date || ct.endDateObject);
-          const isExpired = endDateObj ? endDateObj < new Date() : false;
-
-          const contractId = ct.contractId || ct.contract_id || ct.id;
-          const employeeId = ct.employeeId || ct.employee_id || ct.employeeIdValue;
-          const startDateRaw = ct.startDate || ct.start_date || null;
-          const endDateRaw = ct.endDate || ct.end_date || (endDateObj ? endDateObj.toISOString().slice(0,10) : null);
-          const baseSalary = ct.baseSalary || ct.base_salary || null;
-          const otRate = ct.otRate || ct.ot_rate || null;
-          const annualLeaveDays = ct.annualLeaveDays || ct.annual_leave_days || null;
-          const typeVal = ct.type || ct.contractType || null;
-
-          return {
-            contract_id: contractId,
-            employee_id: employeeId,
-            employee_name: empMap[employeeId] || empMap[String(employeeId)] || '',
-            start_date: startDateRaw,
-            end_date: endDateRaw,
-            base_salary: baseSalary,
-            ot_rate: otRate,
-            annual_leave_days: annualLeaveDays,
-            type: typeVal,
-            status: isExpired ? "Expired" : "Active"
-          };
-        });
-
-        // Try to parse JSON fields from backend (allowances/bonuses/deductions)
-        const parseListField = (v) => {
-          if (!v) return [];
-          try {
-            if (typeof v === 'string') return JSON.parse(v);
-            if (Array.isArray(v)) return v;
-            return [];
-          } catch (e) { return [] }
-        };
-
-        // Attach parsed lists if backend provided JSON fields
-        const formattedFullTimeWithLists = formattedFullTime.map((f, idx) => {
-          const src = rawFullTime[idx] || {};
-          return {
-            ...f,
-            allowances: parseListField(src.allowancesJson || src.allowances || src.allowances_json),
-            bonuses: parseListField(src.bonusesJson || src.bonuses || src.bonuses_json),
-            deductions: parseListField(src.deductionsJson || src.deductions || src.deductions_json)
-          };
-        });
-
-        setFullTimeData(formattedFullTimeWithLists || []);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to load fulltime contract data:", err);
-        setLoading(false);
-      }
-    };
-
     fetchContracts();
   }, []);
 
-  // Fetch freelance contracts
-  useEffect(() => {
-    const fetchFreelanceContracts = async () => {
-      try {
-        const [resFreelance, resEmployees] = await Promise.all([
-          axios.get('/api/freelance-contracts'),
-          axios.get('/api/employees')
-        ]);
+  // Fetch freelance contracts (refactored as callable function)
+  const fetchFreelanceContracts = async () => {
+    try {
+      const [resFreelance, resEmployees] = await Promise.all([
+        axios.get('/api/freelance-contracts'),
+        axios.get('/api/employees')
+      ]);
 
-        const rawFreelance = Array.isArray(resFreelance.data) ? resFreelance.data : (resFreelance.data && Array.isArray(resFreelance.data.data) ? resFreelance.data.data : []);
+      const rawFreelance = Array.isArray(resFreelance.data) ? resFreelance.data : (resFreelance.data && Array.isArray(resFreelance.data.data) ? resFreelance.data.data : []);
         const employeesRaw = Array.isArray(resEmployees.data) ? resEmployees.data : (resEmployees.data && Array.isArray(resEmployees.data.data) ? resEmployees.data.data : []);
 
         // Build employee id -> full name map
@@ -157,13 +156,13 @@ function Contract() {
           const committedDeadlineRaw = ct.committedDeadline || ct.committed_deadline || null;
 
           return {
-            contract_id: contractId,
-            employee_id: employeeId,
+            contractId: contractId,
+            employeeId: employeeId,
             employee_name: empMap[employeeId] || empMap[String(employeeId)] || '',
-            start_date: startDateRaw,
-            end_date: endDateRaw,
+            startDate: startDateRaw,
+            endDate: endDateRaw,
             value: value,
-            committed_deadline: committedDeadlineRaw,
+            committedDeadline: committedDeadlineRaw,
             status: isExpired ? "Expired" : "Active"
           };
         });
@@ -187,8 +186,9 @@ function Contract() {
       } catch (err) {
         console.error("Failed to load freelance contract data:", err);
       }
-    };
+  };
 
+  useEffect(() => {
     fetchFreelanceContracts();
   }, []);
 
@@ -206,8 +206,8 @@ function Contract() {
       const s = search.toLowerCase();
 
       const matchSearch =
-        (c.contract_id && c.contract_id.toString().includes(s)) ||
-        (c.employee_id && c.employee_id.toString().includes(s)) ||
+        (c.contractId && c.contractId.toString().includes(s)) ||
+        (c.employeeId && c.employeeId.toString().includes(s)) ||
         (c.employee_name && c.employee_name.toLowerCase().includes(s));
 
       const matchType = filters.type ? c.type === filters.type : true;
@@ -227,9 +227,9 @@ function Contract() {
         const res = await axios.get('/api/payroll');
         const list = Array.isArray(res.data) ? res.data : [];
 
-        const empId = contract.employee_id || contract.employeeId || contract.employeeIdValue;
+        const empId = contract.employeeId || contract.employee_id || contract.employeeIdValue;
 
-        if (contract.base_salary !== undefined) {
+        if (contract.baseSalary !== undefined) {
           // Fulltime: try to find matching FULLTIME payslip in dashboard
           const match = list.find(i => (i.employeeId == empId) && (i.contractType === 'FULLTIME') && i.payslipId);
           let payrollId = null;
@@ -329,18 +329,29 @@ function Contract() {
               search={search}
               filters={filters}
               onEdit={handleViewContract}
+              onContractEnded={() => {
+                // Refresh contracts list when contract is ended
+                fetchContracts();
+              }}
               columns={[
-                { header: 'Contract ID', accessor: 'contract_id' },
-                { header: 'Employee ID', accessor: 'employee_id' },
+                { header: 'Contract ID', accessor: 'contractId' },
+                { header: 'Employee ID', accessor: 'employeeId' },
                 { header: 'Employee Name', accessor: 'employee_name' },
-                { header: 'Start Date', accessor: 'start_date' },
-                { header: 'End Date', accessor: 'end_date' },
+                { header: 'Start Date', accessor: 'startDate' },
+                { 
+                  header: 'End Date', 
+                  render: (row) => row.endDate ? (
+                    <span style={{ color: '#b91c1c', fontWeight: '500' }}>{row.endDate}</span>
+                  ) : (
+                    <span style={{ background: '#dcfce7', color: '#166534', padding: '0.25rem 0.5rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: '500' }}>Ongoing</span>
+                  )
+                },
                 {
                   header: 'Base Salary',
-                  render: (row) => `${Number(row.base_salary || 0).toLocaleString()} VND`
+                  render: (row) => `${Number(row.baseSalary || 0).toLocaleString()} VND`
                 },
-                { header: 'OT Rate', accessor: 'ot_rate' },
-                { header: 'Annual Leave', render: (row) => `${row.annual_leave_days || 0} days` },
+                { header: 'OT Rate', accessor: 'otRate' },
+                { header: 'Annual Leave', render: (row) => `${row.annualLeaveDays || 0} days` },
                 { header: 'Type', render: (row) => (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       row.type === "Indefinite" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
@@ -358,17 +369,28 @@ function Contract() {
               search={search}
               filters={filters}
               onEdit={handleViewContract}
+              onContractEnded={() => {
+                // Refresh contracts list when contract is ended
+                fetchFreelanceContracts();
+              }}
               columns={[
-                { header: 'Contract ID', accessor: 'contract_id' },
-                { header: 'Employee ID', accessor: 'employee_id' },
+                { header: 'Contract ID', accessor: 'contractId' },
+                { header: 'Employee ID', accessor: 'employeeId' },
                 { header: 'Employee Name', accessor: 'employee_name' },
-                { header: 'Start Date', accessor: 'start_date' },
-                { header: 'End Date', accessor: 'end_date' },
+                { header: 'Start Date', accessor: 'startDate' },
+                { 
+                  header: 'End Date', 
+                  render: (row) => row.endDate ? (
+                    <span style={{ color: '#b91c1c', fontWeight: '500' }}>{row.endDate}</span>
+                  ) : (
+                    <span style={{ background: '#dcfce7', color: '#166534', padding: '0.25rem 0.5rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: '500' }}>Ongoing</span>
+                  )
+                },
                 {
                   header: 'Value',
                   render: (row) => `${Number(row.value || 0).toLocaleString()} VND`
                 },
-                { header: 'Committed Deadline', accessor: 'committed_deadline' },
+                { header: 'Committed Deadline', accessor: 'committedDeadline' },
                 { header: 'Status', render: (row) => (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       row.status === 'Active' ? 'bg-green-100 text-green-700' : (row.status === 'Expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')

@@ -1,8 +1,10 @@
 package com.example.demo.repository;
 import com.example.demo.entity.FreelanceContract;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -33,4 +35,8 @@ public interface FreelanceContractRepository extends JpaRepository<FreelanceCont
     // [MỚI] Lấy danh sách Penalty của hợp đồng
     @Query(value = "SELECT name, amount, rate FROM freelance_contract_penalty WHERE contract_id = :contractId", nativeQuery = true)
     List<Object[]> findPenaltiesByContractId(@Param("contractId") Long contractId);
+
+    @Modifying
+    @Transactional
+    void deleteByEmployeeId(Long employeeId);
 }

@@ -32,11 +32,14 @@ public class FulltimeContract {
     @Column(name = "ot_rate")
     private Double otRate;
 
+    @Column(name = "standard_work_days")
+    private Double standardWorkDays;
+
     @Column(name = "annual_leave_days")
     private Integer annualLeaveDays;
 
     @Column(name = "type", columnDefinition = "text")
-    private String type; 
+    private String type;
 
     @Column(name = "document_path")
     private String documentPath;

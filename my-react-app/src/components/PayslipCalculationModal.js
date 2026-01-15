@@ -10,6 +10,7 @@ const PayslipCalculationModal = ({ isOpen, onClose, record, onSuccess, month, ye
 
     // State cho Fulltime (Nhập tiền)
     const [manualBonuses, setManualBonuses] = useState([]); // [{ key: 'holiday', amount: 500000 }]
+    const [manualPenalties, setManualPenalties] = useState([]);
 
     // State cho Freelance (Chỉ nhập tên khoản thưởng/phạt để kích hoạt từ hợp đồng)
     const [selectedBonuses, setSelectedBonuses] = useState([]); // List of strings ['Early Completion']
@@ -40,6 +41,7 @@ const PayslipCalculationModal = ({ isOpen, onClose, record, onSuccess, month, ye
 
 const resetForm = () => {
         setManualBonuses([]);
+        setManualPenalties([]);
         setSelectedBonuses([]);
         setSelectedPenalties([]);
         setFreelanceTerms({ bonuses: [], penalties: [] });
@@ -60,6 +62,16 @@ const resetForm = () => {
         setManualBonuses(manualBonuses.filter((_, i) => i !== index));
     };
 
+    // [NEW] Penalty Handlers
+    const addManualPenalty = () => setManualPenalties([...manualPenalties, { key: '', amount: '' }]);
+    const updateManualPenalty = (index, field, value) => {
+        const updated = [...manualPenalties];
+        updated[index][field] = value;
+        setManualPenalties(updated);
+    };
+    const removeManualPenalty = (index) => {
+        setManualPenalties(manualPenalties.filter((_, i) => i !== index));
+    };
     // --- HANDLERS CHO FREELANCE ---
     const toggleFreelanceItem = (type, name) => {
         if (type === 'bonus') {
@@ -98,6 +110,15 @@ const resetForm = () => {
                     if (b.key && b.amount) bonusesMap[b.key] = parseFloat(b.amount);
                 });
                 params.manualBonuses = bonusesMap;
+
+                // 2. Map Penalties [NEW]
+                const penaltiesMap = {};
+                manualPenalties.forEach(p => {
+                    // Với Penalty, key có thể là free text nếu BE cho phép, hoặc dropdown nếu có Metadata
+                    // Ở đây giả sử nhập text lý do phạt vào input key
+                    if (p.key && p.amount) penaltiesMap[p.key] = parseFloat(p.amount);
+                });
+                params.manualPenalties = penaltiesMap;
             } else {
                 // Validate & Map Freelance data (Filter empty strings)
                 params.selectedBonuses = selectedBonuses.filter(s => s.trim() !== '');
@@ -148,6 +169,7 @@ const resetForm = () => {
                 {/* --- FORM CHO FULLTIME --- */}
                 {isFulltime && (
                     <>
+                        {/* 1. Bonuses Section */}
                         <div style={styles.section}>
                             <h3 style={styles.sectionTitle}>Manual Bonuses (Thưởng nhập tay)</h3>
                             {manualBonuses.map((item, idx) => (
@@ -173,6 +195,31 @@ const resetForm = () => {
                                 </div>
                             ))}
                             <button onClick={addManualBonus} style={styles.addBtn}>+ Add Bonus</button>
+                        </div>
+                        {/* 2. Penalties Section [NEW] */}
+                        <div style={styles.section}>
+                            <h3 style={styles.sectionTitle}>Manual Penalties (Phạt)</h3>
+                            {manualPenalties.map((item, idx) => (
+                                <div key={idx} style={styles.row}>
+                                    {/* Penalty Key có thể là Text input vì lý do phạt đa dạng */}
+                                    <input 
+                                        type="text"
+                                        placeholder="Reason (e.g. Late, Damage)"
+                                        value={item.key}
+                                        onChange={(e) => updateManualPenalty(idx, 'key', e.target.value)}
+                                        style={styles.select} // Tái sử dụng style
+                                    />
+                                    <input
+                                        type="number" 
+                                        placeholder="Amount" 
+                                        value={item.amount}
+                                        onChange={(e) => updateManualPenalty(idx, 'amount', e.target.value)}
+                                        style={styles.input}
+                                    />
+                                    <button onClick={() => removeManualPenalty(idx)} style={styles.removeBtn}>✕</button>
+                                </div>
+                            ))}
+                            <button onClick={addManualPenalty} style={{...styles.addBtn, backgroundColor: '#fee2e2', color: '#dc2626'}}>+ Add Penalty</button>
                         </div>
                     </>
                 )}

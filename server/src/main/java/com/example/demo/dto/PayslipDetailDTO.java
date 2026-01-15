@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
-import java.math.BigDecimal; // Import quan trọng
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -19,18 +19,25 @@ public class PayslipDetailDTO {
     private Long payrollId;
     private Long employeeId;
 
-    // Đổi tên biến cho khớp với code Service (setFullName)
     private String fullName;
     private String bankAccountNumber;
-
-    private BigDecimal baseSalary;
     
-    // Thêm 2 trường này (dùng BigDecimal để khớp với Entity)
-    private BigDecimal grossSalary;
-    private BigDecimal netSalary;
+    private BigDecimal baseSalary;   // Lương cứng hợp đồng
+    private BigDecimal grossSalary;  // Tổng thu nhập
+    private BigDecimal netSalary;    // Thực lãnh
+    
+    private BigDecimal taxableIncome; 
 
-    // Các list chi tiết
+    // UI sẽ dùng: (baseSalary / formulaStandardDays) * actualWorkDays
+    private BigDecimal actualWorkDays;      // Tử số: Ngày làm thực tế (Snapshot)
+    private BigDecimal formulaStandardDays; // Mẫu số: Ngày công chuẩn (Contract)
+    
+    // UI sẽ dùng: (baseSalary / (formulaStandardDays * 8)) * otHours * formulaOtRate
+    private BigDecimal otHours;             // Số giờ OT (Snapshot)
+    private BigDecimal formulaOtRate;       // Hệ số OT (Contract)
+
+    // Frontend sẽ loop các list này để hiện dòng chi tiết
     private List<Map<String, Object>> allowances;
     private List<Map<String, Object>> bonuses;
-    private List<Map<String, Object>> deductions; //deduction for fulltime, penalty for freelance
+    private List<Map<String, Object>> deductions; // Bao gồm cả Bảo hiểm, Thuế, Phạt
 }

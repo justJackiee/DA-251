@@ -7,6 +7,7 @@ import java.util.Map;
 
 @Data
 public class PayrollRequest {
+    private Long payrollId;
     private int month;
     private int year;
     
@@ -15,9 +16,15 @@ public class PayrollRequest {
     @Data
     public static class EmployeeInput {
         private Long employeeId;
-        private Map<String, BigDecimal> fulltimeManualBonuses; // Key: "holiday", "other"... 
         
-        // Freelance Selection
+        // --- FULLTIME INPUTS (REQUIRED FOR NEW LOGIC) ---
+        private BigDecimal actualWorkDays;
+        private BigDecimal otHours;
+        
+        private Map<String, BigDecimal> fulltimeManualBonuses;   // Key: "holiday"
+        private Map<String, BigDecimal> fulltimeManualPenalties;
+        
+        // --- FREELANCE INPUTS ---
         private List<String> freelanceSelectedBonuses;
         private List<String> freelanceSelectedPenalties;
     }

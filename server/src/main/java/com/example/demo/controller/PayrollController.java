@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.FulltimePayslipCalculationRequest; // [NEW] Import DTO mới
 import com.example.demo.dto.PayrollDashboardDTO;
 import com.example.demo.dto.PayrollRequest;
 import com.example.demo.dto.PayslipDetailDTO;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +20,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/payroll")
-@CrossOrigin(origins = "*") // Cho phép tất cả nguồn (giống EmployeeController)
+@CrossOrigin(origins = "*") // Cho phép tất cả nguồn
 @RequiredArgsConstructor
 public class PayrollController {
 
@@ -43,43 +46,61 @@ public class PayrollController {
     public ResponseEntity<List<PayrollDashboardDTO>> getDashboard(
             @RequestParam(defaultValue = "11") int month,
             @RequestParam(defaultValue = "2024") int year) {
-        
+
         List<PayrollDashboardDTO> dashboardData = payrollService.getPayrollDashboard(month, year);
         return ResponseEntity.ok(dashboardData);
     }
 
     // =========================================================================
-    // 2. CALCULATION: Tính lương (Unified Endpoint)
-    // API này dùng cho cả: "Tính tất cả", "Tính lại 1 người", "Fulltime", "Freelance"
+    // 2. BULK CALCULATION: Tính lương hàng loạt (Nút "Calculate All")
     // =========================================================================
     @PostMapping("/calculate")
     public ResponseEntity<?> calculatePayroll(@RequestBody PayrollRequest request) {
         try {
-            // Validation cơ bản
             if (request.getMonth() < 1 || request.getMonth() > 12) {
                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid month"));
             }
 
-            // Gọi Service xử lý logic định tuyến
             payrollService.calculatePayroll(request);
 
             return ResponseEntity.ok(Map.of(
-                "success", true, 
-                "message", "Payroll calculation completed successfully for " + request.getMonth() + "/" + request.getYear()
-            ));
+                    "success", true,
+                    "message",
+                    "Payroll calculation completed successfully for " + request.getMonth() + "/" + request.getYear()));
 
         } catch (RuntimeException e) {
-            // Lỗi logic (ví dụ: Payroll Locked)
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "Server Error: " + e.getMessage()));
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("success", false, "message", "Server Error: " + e.getMessage()));
         }
     }
 
     // =========================================================================
-    // 3. DETAIL: Xem chi tiết phiếu lương (Unified Endpoint)
-    // Tự động trả về cấu trúc đúng cho Fulltime hoặc Freelance
+    // [NEW] 2.1. SINGLE CALCULATION: Tính lương 1 người (Nút "Calculate" Popup)
+    // =========================================================================
+    @PostMapping("/calculate/fulltime")
+    public ResponseEntity<?> calculateFulltimePayslipSingle(@RequestBody FulltimePayslipCalculationRequest request) {
+        try {
+            // Validation cơ bản
+            if (request.getEmployeeId() == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Employee ID is required"));
+            }
+
+            // Gọi Service xử lý tính toán và trả về ngay kết quả chi tiết để hiển thị lên UI
+            PayslipDetailDTO result = payrollService.calculateFulltimePayslipSingle(request);
+            
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    // =========================================================================
+    // 3. DETAIL: Xem chi tiết phiếu lương
     // =========================================================================
     @GetMapping("/{payrollId}/employee/{employeeId}")
     public ResponseEntity<?> getPayslipDetail(
@@ -97,7 +118,7 @@ public class PayrollController {
     // 4. LOCK: Chốt sổ kỳ lương
     // =========================================================================
     @PostMapping("/{payrollId}/lock")
-    public ResponseEntity<?> lockPayroll(@PathVariable Integer payrollId) {
+    public ResponseEntity<?> lockPayroll(@PathVariable Long payrollId) {
         try {
             payrollService.lockPayroll(payrollId);
             return ResponseEntity.ok(Map.of("success", true, "message", "Payroll locked successfully"));
@@ -107,34 +128,40 @@ public class PayrollController {
     }
 
     // =========================================================================
-    // 5. TIMESHEET SUMMARY: Lấy thông tin công/OT cho Modal (Read-only)
+    // 5. TIMESHEET SUMMARY: Lấy thông tin công/OT (Updated Logic)
     // =========================================================================
     @GetMapping("/timesheet-summary")
     public ResponseEntity<Map<String, Object>> getTimesheetSummary(
             @RequestParam Long employeeId,
             @RequestParam int month,
             @RequestParam int year) {
-        
+
         Double totalHours = timesheetRepo.calculateTotalWorkedHours(employeeId, month, year);
         Double totalOT = timesheetRepo.calculateTotalOvertimeHours(employeeId, month, year);
+
+        // [FIXED] Sửa logic: Trả về số thực (decimal) thay vì int để khớp với BigDecimal trong Service
+        // Ví dụ: 172 giờ / 8 = 21.5 công (Thay vì bị ép kiểu thành 21)
+        double workDays = (totalHours != null) ? totalHours / 8.0 : 0.0;
         
-        int workDays = (totalHours != null) ? (int) (totalHours / 8.0) : 0;
+        // Làm tròn hiển thị cho đẹp (2 chữ số thập phân)
+        BigDecimal workDaysBd = BigDecimal.valueOf(workDays).setScale(2, RoundingMode.HALF_UP);
+        
         double ot = (totalOT != null) ? totalOT : 0.0;
 
         return ResponseEntity.ok(Map.of(
-            "actualWorkDays", workDays,
-            "suggestedOtHours", ot
-        ));
+                "actualWorkDays", workDaysBd, 
+                "suggestedOtHours", ot));
     }
+
     // =========================================================================
-    // 6. FREELANCE TERMS: Lấy danh sách thưởng/phạt từ hợp đồng (theo tháng/năm)
+    // 6. FREELANCE TERMS: Lấy danh sách thưởng/phạt từ hợp đồng
     // =========================================================================
     @GetMapping("/freelance-contract-terms")
     public ResponseEntity<Map<String, List<com.example.demo.dto.FreelanceContractTerm>>> getFreelanceTerms(
             @RequestParam Long employeeId,
             @RequestParam int month,
             @RequestParam int year) {
-        
+
         try {
             var terms = payrollService.getFreelanceContractTerms(employeeId, month, year);
             return ResponseEntity.ok(terms);

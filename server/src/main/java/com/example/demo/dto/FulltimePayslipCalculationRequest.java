@@ -11,7 +11,7 @@ import java.util.Map;
 @NoArgsConstructor // Constructor không tham số (quan trọng cho Jackson parse JSON)
 @AllArgsConstructor
 public class FulltimePayslipCalculationRequest {
-
+    private Long payrollId;
     // ID nhân viên cần tính lương
     private Long employeeId;
 
@@ -19,12 +19,10 @@ public class FulltimePayslipCalculationRequest {
     private Integer month;
     private Integer year;
 
-    // Số ngày công thực tế (nếu muốn nhập tay, nếu không thì lấy mặc định trong
-    // service)
-    private Integer actualWorkDays;
+    private BigDecimal actualWorkDays;
 
     // Số giờ làm thêm (OT)
-    private Double otHours;
+    private BigDecimal otHours;
 
     /**
      * Map chứa các khoản thưởng nhập tay.
@@ -37,4 +35,6 @@ public class FulltimePayslipCalculationRequest {
      * }
      */
     private Map<String, BigDecimal> bonuses;
+
+    private Map<String, BigDecimal> manualPenalties;
 }

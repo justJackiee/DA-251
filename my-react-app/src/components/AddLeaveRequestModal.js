@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 export default function AddLeaveRequestModal({ isOpen, onClose, onSuccess }) {
+  const [employees, setEmployees] = useState([]);
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
@@ -13,6 +14,31 @@ export default function AddLeaveRequestModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Load employees on mount
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/employees');
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Employees API response:', data);
+          // Filter only full-time employees
+          const fullTimeEmployees = data.filter(emp => 
+            emp.type === 'Fulltime' || emp.contractType === 'Fulltime'
+          );
+          console.log('Filtered fulltime employees:', fullTimeEmployees);
+          setEmployees(fullTimeEmployees);
+        }
+      } catch (err) {
+        console.error('Failed to load employees:', err);
+      }
+    };
+
+    if (isOpen) {
+      loadEmployees();
+    }
+  }, [isOpen]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -21,11 +47,7 @@ export default function AddLeaveRequestModal({ isOpen, onClose, onSuccess }) {
 
   const validate = () => {
     if (!formData.employeeId) {
-      setError('Employee ID is required');
-      return false;
-    }
-    if (isNaN(parseInt(formData.employeeId)) || parseInt(formData.employeeId) <= 0) {
-      setError('Employee ID must be a valid positive number');
+      setError('Employee is required');
       return false;
     }
     if (!formData.startDate) {
@@ -110,21 +132,25 @@ export default function AddLeaveRequestModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Employee ID */}
+          {/* Employee Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Employee ID <span className="text-red-500">*</span>
+              Employee name <span className="text-red-500">*</span>
             </label>
-            <input
-              type="number"
+            <select
               name="employeeId"
               value={formData.employeeId}
               onChange={handleChange}
-              placeholder="Enter employee ID"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900"
               required
-              min="1"
-            />
+            >
+              <option value="" className="text-gray-500">Select an employee</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id} className="text-gray-900">
+                  {emp.fullName || emp.fName + ' ' + emp.lName || emp.name || `Employee ${emp.id}`}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Start Date */}

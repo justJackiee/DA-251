@@ -94,7 +94,8 @@ CREATE TABLE freelance_contract (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     value DECIMAL(15, 2) NOT NULL, -- Tổng giá trị hợp đồng
-    committed_deadline DATE
+    committed_deadline DATE,
+    document_path VARCHAR(500)
 );
 
 CREATE TABLE freelance_contract_bonus (
@@ -324,9 +325,9 @@ INSERT INTO fulltime_contract_workday (contract_id, day, start_at, end_at) VALUE
 (3, 'Friday', '08:30', '17:30');
 
 -- 8. Freelance Contracts
-INSERT INTO freelance_contract (employee_id, start_date, end_date, value, committed_deadline) VALUES
-(4, '2024-01-15', '2024-06-30', 50000000.00, '2024-06-15'),
-(5, '2024-03-01', '2024-12-31', 80000000.00, '2024-11-30');
+INSERT INTO freelance_contract (employee_id, start_date, end_date, value, committed_deadline, document_path) VALUES
+(4, '2024-01-15', '2024-06-30', 50000000.00, '2024-06-15', 'contracts/freelance_4.pdf'),
+(5, '2024-03-01', '2024-12-31', 80000000.00, '2024-11-30', 'contracts/freelance_5.pdf');
 
 -- 9. Freelance Contract Bonus
 INSERT INTO freelance_contract_bonus (contract_id, stt, name, amount, rate) VALUES
@@ -339,32 +340,67 @@ INSERT INTO freelance_contract_penalty (contract_id, stt, name, amount, rate) VA
 (2, 1, 'Quality Issue Penalty', 3000000.00, NULL);
 
 -- 11. Timesheet
--- (November 2025 data)
---Week 1
 INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
-('2025-11-03','2025-11-03 07:55','2025-11-03 17:00',1),
+-- November 3: John (emp 1) FULL DAY - 2 sessions: 8h total
+('2025-11-03','2025-11-03 07:55','2025-11-03 12:05',1),
+('2025-11-03','2025-11-03 13:00','2025-11-03 17:10',1),
+
+-- November 4: John LATE - chỉ 7h (5h <= T < 7.75h)
+('2025-11-04','2025-11-04 08:30','2025-11-04 16:30',1),
+
+-- November 5: John FULL DAY - 8h đủ
+('2025-11-05','2025-11-05 07:50','2025-11-05 17:00',1),
+
+-- November 6: John HALF_DAY - 4h (3.75h <= T < 5h)
+('2025-11-06','2025-11-06 08:00','2025-11-06 13:00',1),
+
+-- November 7: John ABSENT - chỉ 2h (T < 3.75h)
+('2025-11-07','2025-11-07 08:00','2025-11-07 10:30',1),
+
+-- November 3-7: Các nhân viên khác
 ('2025-11-03','2025-11-03 08:10','2025-11-03 18:05',2),
 ('2025-11-03','2025-11-03 08:05','2025-11-03 17:40',3),
 
-('2025-11-04','2025-11-04 08:05','2025-11-04 17:18',1),
 ('2025-11-04','2025-11-04 08:12','2025-11-04 18:00',2),
 ('2025-11-04','2025-11-04 07:58','2025-11-04 17:10',3),
 
-('2025-11-05','2025-11-05 07:50','2025-11-05 17:25',1),
-('2025-11-05','2025-11-05 08:15','2025-11-05 18:15',2),
+-- November 5: Employee 2 nghỉ phép (APPROVED leave)
 ('2025-11-05','2025-11-05 08:00','2025-11-05 17:00',3),
 
-('2025-11-06','2025-11-06 08:00','2025-11-06 17:00',1),
 ('2025-11-06','2025-11-06 08:05','2025-11-06 18:20',2),
 ('2025-11-06','2025-11-06 07:55','2025-11-06 17:45',3),
 
-('2025-11-07','2025-11-07 08:10','2025-11-07 17:22',1),
 ('2025-11-07','2025-11-07 08:00','2025-11-07 18:00',2),
-('2025-11-07','2025-11-07 08:08','2025-11-07 17:55',3);
+('2025-11-07','2025-11-07 08:08','2025-11-07 17:55',3),
+
+-- Week 2: More test cases
+-- November 10-11: Employee 2 nghỉ phép (APPROVED leave)
+-- November 10: John FULL with OT - 8h shift + 1h OT (17:00-18:00)
+('2025-11-10','2025-11-10 08:00','2025-11-10 12:00',1),
+('2025-11-10','2025-11-10 13:00','2025-11-10 18:00',1),
+
+-- November 11: John LATE (boundary test) - đúng 5h (5h <= T < 7.75h)
+('2025-11-11','2025-11-11 08:00','2025-11-11 12:00',1),
+('2025-11-11','2025-11-11 13:00','2025-11-11 14:00',1),
+
+-- November 12: John FULL (boundary test) - đúng 7.75h
+('2025-11-12','2025-11-12 08:00','2025-11-12 16:45',1),
+
+-- November 13: John HALF_DAY (boundary test) - đúng 3.75h
+('2025-11-13','2025-11-13 08:00','2025-11-13 12:45',1),
+
+-- November 14: John ABSENT (boundary test) - 3.5h < 3.75h
+('2025-11-14','2025-11-14 08:00','2025-11-14 12:30',1),
+
+-- Các nhân viên khác tuần 2 (emp 2 nghỉ phép 10-11/11)
+('2025-11-12','2025-11-12 08:10','2025-11-12 17:45',2),
+('2025-11-13','2025-11-13 08:00','2025-11-13 17:00',2),
+('2025-11-14','2025-11-14 08:05','2025-11-14 17:20',2);
+
 
 --Week 2
 INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
-('2025-11-10','2025-11-10 07:57','2025-11-10 17:05',1),
+--('2025-11-10','2025-11-10 07:57','2025-11-10 17:05',1),
 ('2025-11-10','2025-11-10 08:10','2025-11-10 18:10',2),
 ('2025-11-10','2025-11-10 07:52','2025-11-10 17:42',3),
 
@@ -372,15 +408,15 @@ INSERT INTO timesheet (date, checkin_time, checkout_time, employee_id) VALUES
 ('2025-11-11','2025-11-11 08:12','2025-11-11 18:25',2),
 ('2025-11-11','2025-11-11 08:05','2025-11-11 17:50',3),
 
-('2025-11-12','2025-11-12 07:55','2025-11-12 17:18',1),
+--('2025-11-12','2025-11-12 07:55','2025-11-12 17:18',1),
 ('2025-11-12','2025-11-12 08:08','2025-11-12 18:00',2),
 ('2025-11-12','2025-11-12 08:00','2025-11-12 17:30',3),
 
-('2025-11-13','2025-11-13 07:50','2025-11-13 17:10',1),
+--('2025-11-13','2025-11-13 07:50','2025-11-13 17:10',1),
 ('2025-11-13','2025-11-13 08:10','2025-11-13 18:20',2),
 ('2025-11-13','2025-11-13 07:58','2025-11-13 17:00',3),
 
-('2025-11-14','2025-11-14 08:05','2025-11-14 17:00',1),
+--('2025-11-14','2025-11-14 08:05','2025-11-14 17:00',1),
 ('2025-11-14','2025-11-14 08:15','2025-11-14 18:12',2),
 ('2025-11-14','2025-11-14 08:10','2025-11-14 17:38',3);
 
@@ -670,8 +706,8 @@ INSERT INTO fulltime_payslip (payroll_id, employee_id, contract_id, net_salary, 
 ((SELECT id FROM payroll WHERE month=6), 1, 1, 22000000, 25000000);
 
 CREATE OR REPLACE PROCEDURE sp_generate_fulltime_payslip(
-    p_payroll_id INT,
-    p_employee_id INT,
+    p_payroll_id BIGINT,
+    p_employee_id BIGINT,
     p_actual_work_days DECIMAL(15, 2),
     p_ot_hours DECIMAL(15, 2),
     p_manual_bonus JSONB DEFAULT '{}'::JSONB,
@@ -785,8 +821,7 @@ BEGIN
     v_contract_gross := v_base_salary + v_responsibility_allowance + v_living_allowance;
     
     -- Tính Gross thực tế (Đã bao gồm ngày công thực tế, OT, Bonus...)
-    v_actual_gross_income := ((v_contract_gross / v_standard_work_days) * p_actual_work_days) 
-                             + v_total_bonus + v_ot_amount + v_travel_allowance;
+    v_actual_gross_income := (v_contract_gross + v_total_bonus + v_ot_amount + v_travel_allowance) / v_standard_work_days * p_actual_work_days;
                              
     -- 6. DEDUCTIONS (BẢO HIỂM)
     -- [UPDATED LOGIC] Dùng v_actual_gross_income để tính % bảo hiểm thay vì v_base_salary
@@ -821,6 +856,11 @@ BEGIN
     v_net_income := GREATEST(0, v_actual_gross_income - v_total_statutory_deduction - v_tax - v_total_penalty);
 
     -- 10. PERSIST
+    -- Clean up child tables first
+    DELETE FROM fulltime_actual_allowance WHERE payslip_id IN (SELECT payslip_id FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    DELETE FROM fulltime_actual_bonus WHERE payslip_id IN (SELECT payslip_id FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    DELETE FROM fulltime_payslip_deduction WHERE payslip_id IN (SELECT payslip_id FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id);
+    
     DELETE FROM fulltime_payslip WHERE payroll_id = p_payroll_id AND employee_id = p_employee_id;
 
     INSERT INTO fulltime_payslip (
@@ -832,6 +872,38 @@ BEGIN
         p_actual_work_days, p_ot_hours, v_saved_taxable_income
     )
     RETURNING payslip_id INTO v_payslip_id;
+
+    -- Insert Allowances
+    INSERT INTO fulltime_actual_allowance (payslip_id, stt, name, amount)
+    SELECT v_payslip_id, stt, name, amount
+    FROM fulltime_contract_allowance
+    WHERE contract_id = v_contract_id;
+
+    -- Insert Bonuses (only those that apply based on calculation logic)
+    v_stt_counter := 1;
+    FOR r_bonus IN SELECT name, amount, rate FROM fulltime_contract_bonus WHERE contract_id = v_contract_id LOOP
+        v_calc_amount := COALESCE(r_bonus.amount, v_base_salary * (r_bonus.rate / 100.0));
+        IF r_bonus.name ILIKE '%Performance%' THEN
+            INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES (v_payslip_id, v_stt_counter, r_bonus.name, v_calc_amount);
+            v_stt_counter := v_stt_counter + 1;
+        ELSIF r_bonus.name ILIKE '%Quarter%' AND v_month IN (3, 6, 9, 12) THEN
+            INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES (v_payslip_id, v_stt_counter, r_bonus.name, v_calc_amount);
+            v_stt_counter := v_stt_counter + 1;
+        ELSIF r_bonus.name ILIKE '%Year%' AND v_month = 12 THEN
+            INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES (v_payslip_id, v_stt_counter, r_bonus.name, v_calc_amount);
+            v_stt_counter := v_stt_counter + 1;
+        END IF;
+    END LOOP;
+
+    -- Insert manual bonuses (holiday, other)
+    IF v_holiday_bonus > 0 THEN
+        INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES (v_payslip_id, v_stt_counter, 'Holiday Bonus', v_holiday_bonus);
+        v_stt_counter := v_stt_counter + 1;
+    END IF;
+    IF v_other_bonus > 0 THEN
+        INSERT INTO fulltime_actual_bonus (payslip_id, stt, name, amount) VALUES (v_payslip_id, v_stt_counter, 'Other Bonus', v_other_bonus);
+        v_stt_counter := v_stt_counter + 1;
+    END IF;
 
     INSERT INTO fulltime_payslip_deduction (payslip_id, stt, name, amount) VALUES
     (v_payslip_id, 1, 'Self Deduction', SELF_DEDUCTION),
@@ -918,8 +990,8 @@ JOIN fulltime_contract fc ON fp.contract_id = fc.contract_id;
 
 
 CREATE OR REPLACE PROCEDURE sp_generate_freelance_payslip(
-    p_payroll_id INT,
-    p_employee_id INT,
+    p_payroll_id BIGINT,
+    p_employee_id BIGINT,
     p_adjustments JSONB DEFAULT '{"bonuses": [], "penalties": []}'::JSONB
 )
 LANGUAGE plpgsql

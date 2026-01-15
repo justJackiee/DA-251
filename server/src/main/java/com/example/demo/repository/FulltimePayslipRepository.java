@@ -69,4 +69,8 @@ public interface FulltimePayslipRepository extends JpaRepository<FulltimePayslip
                 LIMIT 1
             """, nativeQuery = true)
     List<PayslipHistoryDTO> findLatest(@Param("empId") Long empId);
+
+    @Modifying
+    @Transactional
+    void deleteByEmployeeId(Long employeeId);
 }

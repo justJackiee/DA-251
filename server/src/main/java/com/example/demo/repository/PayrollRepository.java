@@ -84,9 +84,27 @@ public interface PayrollRepository extends JpaRepository<Payroll, Long> {
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
 
-    // Cập nhật trạng thái (Ví dụ: Chốt lương -> Paid)
     @Modifying
     @Transactional
     @Query("UPDATE Payroll p SET p.status = :status WHERE p.id = :id")
     void updateStatus(@Param("id") Long id, @Param("status") String status);
+
+    // =========================================================================
+    // 4. UNPAID SALARY CHECK (Kiểm tra lương chưa thanh toán trước khi Inactivate)
+    // =========================================================================
+    @Query(value = """
+            SELECT
+                p.id as "id",
+                p.month as "month",
+                p.year as "year",
+                p.status as "status",
+                CAST(p.period_start AS TEXT) as "periodStart",
+                CAST(p.period_end AS TEXT) as "periodEnd"
+            FROM payroll p
+            LEFT JOIN fulltime_payslip fp ON p.id = fp.payroll_id
+            LEFT JOIN freelance_payslip flp ON p.id = flp.payroll_id
+            WHERE p.status = 'Unpaid'
+            AND (fp.employee_id = :employeeId OR flp.employee_id = :employeeId)
+            """, nativeQuery = true)
+    List<Map<String, Object>> findUnpaidPayrollByEmployeeId(@Param("employeeId") Long employeeId);
 }

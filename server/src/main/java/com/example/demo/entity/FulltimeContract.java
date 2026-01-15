@@ -1,16 +1,21 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+
 import java.time.LocalDate;
-import java.util.List;
+
+import java.util.Set;
+import java.math.BigDecimal;
 import com.example.demo.entity.subtable.FulltimeContractAllowance;
 import com.example.demo.entity.subtable.FulltimeContractBonus;
 import com.example.demo.entity.subtable.FulltimeContractDeduction;
 
 @Entity
 @Table(name = "fulltime_contract")
-@Data
+@lombok.Getter
+@lombok.Setter
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 public class FulltimeContract {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,13 +32,13 @@ public class FulltimeContract {
     private LocalDate endDate;
 
     @Column(name = "base_salary")
-    private Double baseSalary;
+    private BigDecimal baseSalary;
 
     @Column(name = "ot_rate")
-    private Double otRate;
+    private BigDecimal otRate;
 
     @Column(name = "standard_work_days")
-    private Double standardWorkDays;
+    private BigDecimal standardWorkDays;
 
     @Column(name = "annual_leave_days")
     private Integer annualLeaveDays;
@@ -44,15 +49,15 @@ public class FulltimeContract {
     @Column(name = "document_path")
     private String documentPath;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "contract_id")
-    private List<FulltimeContractAllowance> allowances;
+    private Set<FulltimeContractAllowance> allowances;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "contract_id")
-    private List<FulltimeContractBonus> bonuses;
+    private Set<FulltimeContractBonus> bonuses;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.LAZY)
     @JoinColumn(name = "contract_id")
-    private List<FulltimeContractDeduction> deductions;
+    private Set<FulltimeContractDeduction> deductions;
 }

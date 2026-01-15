@@ -3,6 +3,7 @@ package com.example.demo.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "freelance_contract")
@@ -23,7 +24,7 @@ public class FreelanceContract {
     private LocalDate endDate;
 
     @Column(name = "value")
-    private Double value;
+    private BigDecimal value;
 
     @Column(name = "committed_deadline")
     private LocalDate committedDeadline;

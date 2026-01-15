@@ -794,7 +794,22 @@ export default function AddEmployeeModal({ isOpen, onClose, initialData = null, 
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to add employee. Check console.');
+      
+      // Check for specific error messages
+      let errorMessage = 'Failed to add employee. Please check the information and try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 500) {
+        const errorData = JSON.stringify(error.response.data);
+        if (errorData.includes('duplicate key') || errorData.includes('email') || errorData.includes('already exists')) {
+          errorMessage = 'This email address is already in use. Please use a different email.';
+        } else if (errorData.includes('username')) {
+          errorMessage = 'This username is already taken. Please choose a different username.';
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

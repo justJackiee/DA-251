@@ -8,6 +8,7 @@ import com.example.demo.repository.FulltimeContractRepository;
 import com.example.demo.repository.FulltimeContractAllowanceRepository;
 import com.example.demo.repository.FulltimeContractBonusRepository;
 import com.example.demo.repository.FulltimeContractDeductionRepository;
+import com.example.demo.repository.PayrollRepository;
 
 import com.example.demo.entity.Employee;
 import com.example.demo.repository.EmployeeRepository;
@@ -16,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @RestController
@@ -37,6 +40,9 @@ public class ContractController {
 
     @Autowired
     private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private PayrollRepository payrollRepository;
 
     // -----------------------------
     // GET ALL
@@ -119,6 +125,88 @@ public class ContractController {
     public ResponseEntity<?> getDeductionsByContractId(@PathVariable Long id) {
         List<FulltimeContractDeduction> deductions = deductionRepository.findByContractIdOrderByStt(id);
         return ResponseEntity.ok(deductions);
+    }
+
+    // END CONTRACT BEFORE END DATE
+    // -----------------------------
+    @PutMapping("/{id}/end")
+    public ResponseEntity<?> endContract(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            FulltimeContract contract = fulltimeContractRepository.findById(id).orElse(null);
+            if (contract == null) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "Contract not found"));
+            }
+
+            Long employeeId = contract.getEmployeeId();
+            LocalDate startDate = contract.getStartDate();
+            
+            // Parse the provided end date or use today
+            LocalDate endDate = LocalDate.now();
+            if (body.containsKey("endDate") && body.get("endDate") != null && !body.get("endDate").isEmpty()) {
+                try {
+                    endDate = LocalDate.parse(body.get("endDate"));
+                } catch (Exception e) {
+                    // Use today if parsing fails
+                }
+            }
+
+            // Validate: end date must be after or equal to start date
+            // The DB constraint requires: start_date < end_date OR end_date IS NULL
+            // So we need endDate to be strictly after startDate
+            if (startDate != null && !endDate.isAfter(startDate)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false, 
+                    "message", "End date must be after the contract start date (" + startDate + ")"
+                ));
+            }
+
+            // Update contract end date
+            contract.setEndDate(endDate);
+            fulltimeContractRepository.save(contract);
+
+            System.out.println("Contract " + id + " ended on " + endDate + " for employee " + employeeId);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Contract ended successfully",
+                "contractId", id,
+                "employeeId", employeeId,
+                "newEndDate", endDate
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Error ending contract: " + e.getMessage()));
+        }
+    }
+
+    // CHECK IF EMPLOYEE HAS UNPAID PAYSLIPS (before ending contract)
+    // ---------------------------------------------------------------
+    @GetMapping("/{contractId}/employee/unpaid-payslips")
+    public ResponseEntity<?> checkEmployeeUnpaidPayslips(@PathVariable Long contractId) {
+        try {
+            FulltimeContract contract = fulltimeContractRepository.findById(contractId).orElse(null);
+            if (contract == null) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "Contract not found"));
+            }
+
+            Long employeeId = contract.getEmployeeId();
+            
+            // Check if employee has unpaid payslips
+            List<Map<String, Object>> unpaidRecords = payrollRepository.findUnpaidPayrollByEmployeeId(employeeId);
+            
+            boolean hasUnpaid = unpaidRecords != null && !unpaidRecords.isEmpty();
+            int unpaidCount = unpaidRecords != null ? unpaidRecords.size() : 0;
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "hasUnpaidPayslips", hasUnpaid,
+                "unpaidCount", unpaidCount,
+                "employeeId", employeeId
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Error checking payslips: " + e.getMessage()));
+        }
     }
 
 }

@@ -12,6 +12,8 @@ target/
 .project
 .settings/
 bin/
+.history/
+
 
 # PostgreSQL
 *.dump
@@ -28,9 +30,11 @@ postgres_data/
 .DS_Store
 
 # Build
-build/
 dist/
 out/
+my-react-app/build/
+server/target/
+
 
 # Dependencies
 .gradle/

@@ -47,22 +47,8 @@ The project follows a standard **Client-Server Architecture**:
 - Docker Desktop installed and running.
 - Node.js (v18+ recommended) and npm.
 
-### Step 1: Fix Configuration
-**Critical**: There is a port usage mismatch in the current `docker-compose.yml` and `application.properties`.
-- `server/src/main/resources/application.properties` sets `server.port=5000`.
-- `docker-compose.yml` maps host `5000` to container `9000`.
-
-**Action**: Update `docker-compose.yml` line 57:
-```yaml
-# Before
-- "5000:9000"
-
-# After (Fix)
-- "5000:5000"
-```
-
-### Step 2: Start Backend & Database
-From the root directory (`d:/HCMUT/251DAHTTT/GIT/`), run:
+### Step 1: Start Backend & Database
+From the project root directory, run:
 
 ```bash
 docker-compose up -d --build
@@ -74,8 +60,8 @@ This will:
 
 *Check logs if needed: `docker-compose logs -f server`*
 
-### Step 3: Run Frontend
-Open a new terminal configuration:
+### Step 2: Run Frontend
+Open a new terminal:
 
 ```bash
 cd my-react-app
@@ -85,7 +71,7 @@ npm start
 
 The application will open at `http://localhost:3000`.
 
-### Step 4: Stop Services
+### Step 3: Stop Services
 To stop the backend and database containers, run:
 
 ```bash
